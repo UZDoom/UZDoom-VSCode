@@ -11,7 +11,14 @@ export interface GameVersion {
 }
 
 export class GameVersionChecker {
-    public static readonly DEBUGGER_VERSION = GameVersionChecker.parseVersion("g4.15pre-1");
+    public static readonly DEBUGGER_VERSION = {
+        major: 4,
+        minor: 15,
+        patch: 0,
+        prerelease: "pre",
+        prereleaseNum: 1,
+        build: ""
+    };
     // parse version
     // version is in the format of `g<major>.<minor>[.<patch>][<prerelease_tag>-<prerelease_num>-<gitbuild>-m]`
     // example: g4.15pre-355-g2383dcb8d-m
