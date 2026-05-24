@@ -661,7 +661,7 @@ export abstract class DebugAdapterProxy implements VSCodeDebugAdapter {
     }
 
     protected setClientCapabilities(args: DAP.InitializeRequestArguments) {
-        const nargs = args as ClientCapabilities;
+        const nargs = (Object.assign({}, args)) as ClientCapabilities;
         if (typeof args.adapterID !== 'string') {
             nargs.adapterID = DEFAULT_CLIENT_CAPABILITIES.adapterID;
         }
@@ -683,6 +683,10 @@ export abstract class DebugAdapterProxy implements VSCodeDebugAdapter {
         }
         // set the rest
         this.clientCaps = nargs;
+        args.adapterID = this.clientCaps.adapterID;
+        args.columnsStartAt1 = this.debuggerLocale.columnsStartAt1;
+        args.linesStartAt1 = this.debuggerLocale.linesStartAt1;
+        args.pathFormat = this.debuggerLocale.pathsAreURIs ? 'uri' : 'path';
     }
 
     // formatting
