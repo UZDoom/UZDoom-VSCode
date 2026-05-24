@@ -358,8 +358,6 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
                 if (!project.archive.endsWith('/')) {
                     project.archive += '/';
                 }
-            } else {
-                project.archive = path.basename(project.archive);
             }
         }
         this.projects = projectDirectories;
@@ -494,7 +492,15 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
                 let sourcePath = response.body.sources[i].path;
                 if (sourcePath && project && !this.findSourceItemByPathAndOrigin(sourcePath || "", project!.archive || "")) {
                     let absPath = path.join(project.path, sourcePath);
-                    this.sourcePaths.set(absPath, { path: absPath, origin: project });
+                    if (this.sourcePaths.has(absPath)) {
+                        // Likely a file included from a sub-project in the same workspace folder; use the source item from the sub-project
+                        let sourceItem = this.sourcePaths.get(absPath);
+                        project = sourceItem?.origin;
+                        response.body.sources[i].path = sourceItem?.path || sourcePath;
+                        response.body.sources[i].origin = project?.archive;
+                    } else {
+                        this.sourcePaths.set(absPath, { path: absPath, origin: project });
+                    }
                 }
                 response.body.sources[i] = this.convertDebuggerSourceToClient(response.body.sources[i] as DAP.Source, project);
             }
@@ -614,6 +620,11 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
             // split and take last
             let parts = origin.split(":");
             ret = this.projects.find(p => parts[parts.length - 1].toLowerCase() == p.archive?.toLowerCase());
+        }
+        if (!ret) {
+            // get the file name from the origin and check if it's a valid project
+            let fileName = path.basename(origin);
+            ret = this.projects.find(p => fileName.toLowerCase() == p.archive?.toLowerCase());
         }
         return ret;
     }
