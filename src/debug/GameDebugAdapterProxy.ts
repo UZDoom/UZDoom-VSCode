@@ -398,15 +398,6 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
             return;
         }
 
-        // map passes in a tuple
-        request.arguments.projectSources = Array.from(this.sourcePaths).map(([sourcePath, projectItem]) => {
-            return this.convertClientSourceToDebugger({
-                name: path.basename(sourcePath),
-                // make sure path is relative to the workspace folder
-                path: sourcePath.toString(), // Convert path to string
-                origin: projectItem.origin.archive,
-            });
-        });
         // vscode apparently doesn't do anything with the 'modulesRequest', so we have to send it ourselves
         this.onSentLaunchRequest.once(() => {
             const modulesRequest = <DAP.ModulesRequest>new Message('request');
