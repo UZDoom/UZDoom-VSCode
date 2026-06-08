@@ -1,5 +1,6 @@
 export default class Lump
 {
+    private _index: number = 0;
 	private _name: string = "";
 	private _content: ArrayBuffer = new ArrayBuffer(0);
 
@@ -16,6 +17,14 @@ export default class Lump
             name = name.substring(0, name.length - 2);
         }
         return name;
+    }
+
+    get index(): number {
+        return this._index;
+    }
+
+    set index(value: number) {
+        this._index = value;
     }
 
 	get name(): string
@@ -51,8 +60,18 @@ export default class Lump
 		this._content = value;
 	}
 
+    get rawContent(): ArrayBuffer {
+        return this._content;
+    }
+
 	get length(): number
 	{
-		return this.content.byteLength; // NB: Add terminator
-	}
+        return this._content.byteLength; // NB: Add terminator
+    }
+
+    constructor(index: number, name: string, content: ArrayBuffer) {
+        this.index = index;
+        this.name = name;
+        this.content = content;
+    }
 }

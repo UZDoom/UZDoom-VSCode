@@ -107,12 +107,12 @@ export class WadFileSystemProvider implements FileSystemProvider {
         }
 
         if (!entry) {
-            entry = new Lump();
-            entry.name = entryPath;
+            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer);
             wad.lumps.push(entry);
+        } else {
+            entry.content = content.buffer as ArrayBuffer;
         }
 
-        entry.content = content.buffer as ArrayBuffer;
         await fs.writeFile(wadPath, Buffer.from(wad.save()));
     }
 

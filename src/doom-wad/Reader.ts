@@ -93,10 +93,7 @@ export default class Reader
 			totalLength += length;
 
 			const name = this.readString(8);
-			let lump		= LumpFactory.createFromName(name);
-
-			lump.content = this.input!.slice(position, position + length);
-
+            let lump = LumpFactory.createFromName(name, i, this.input!.slice(position, position + length));
 			// console.debug(`Read lump ${lump.name} will be at position 0x${position.toString(16)} with length 0x${length.toString(16)}`);
 
 			lumps.push(lump);
