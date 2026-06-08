@@ -70,12 +70,16 @@ export class VSCodeFileAccessor implements FileAccessor {
                     // get the files in the notInWorkspaceFolders
                     for (let i = 0; i < notInWorkspaceFolders.length; i++) {
                         let root = notInWorkspaceFolders[i];
-                        let files = await glob(include, {
-                            ignore: exclude,
-                            absolute: absolute,
-                            cwd: root
-                        });
-                        thing = thing.concat(files);
+                        try {
+                            let files = await glob(include, {
+                                ignore: exclude,
+                                absolute: absolute,
+                                cwd: root
+                            });
+                            thing = thing.concat(files);
+                        } catch (e) {
+                            console.error(`Error finding files in ${root}: ${e}`);
+                        }
                     }
                 }
             }

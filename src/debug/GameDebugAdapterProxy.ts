@@ -354,7 +354,7 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
             if (typeof project === 'string' || !project.archive) {
                 throw new Error('Project archive path is required.');
             }
-            if (project.archive == project.path || path.extname(path.basename(project.archive)) === '' || await this.workspaceFileAccessor.isDirectory(project.archive)) {
+            if (await this.workspaceFileAccessor.isDirectory(project.archive)) {
                 if (!project.archive.endsWith('/')) {
                     project.archive += '/';
                 }
