@@ -14,7 +14,7 @@ export default class LumpFactory
 	{
 		let result: Lump;
 
-		const trimmed = name.replace(/\0.*$/g,'').toUpperCase();
+        const trimmed = Lump.sanitizeName(name).toUpperCase();
 
 		if(!(trimmed in LumpFactory.classesByName))
 			result = new Lump();
