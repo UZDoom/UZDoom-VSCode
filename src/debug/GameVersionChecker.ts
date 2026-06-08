@@ -57,7 +57,9 @@ export class GameVersionChecker {
     }
 
     // check if version is greater than or equal to the given version
-    public static isGreaterThanOrEqualTo(version: GameVersion, targetVersion: GameVersion): boolean {
+    public static isGreaterThanOrEqualTo(version: GameVersion | string, targetVersion: GameVersion | string): boolean {
+        version = typeof version === 'string' ? this.parseVersion(version) : version;
+        targetVersion = typeof targetVersion === 'string' ? this.parseVersion(targetVersion) : targetVersion;
         if (version.major < targetVersion.major) {
             return false;
         }
@@ -98,19 +100,36 @@ export class GameVersionChecker {
         } catch (error) {
             throw new Error(`${path} could not be executed: ${error}`);
         }
+        return this.getGameVersionFromOutput(output);
+    }
+
+    public static getGameVersionFromOutput(output: string): GameVersion | undefined {
+        output = output.trim();
         // split into lines, find one that starts with "<GAME_NAME> version "
-        const prefix = `${GAME_LABEL_NAME} version `;
-        let version = '';
-        for (const line of output.split('\n')) {
+        const prefix = `${GAME_LABEL_NAME} version`;
+        const alternatePrefix = `${GAME_LABEL_NAME} `;
+        let version: GameVersion | undefined = undefined;
+        for (let line of output.split('\n')) {
+            line = line.trim();
             if (line.startsWith(prefix)) {
-                version = line.split(prefix)[1].trim();
+                try {
+                    version = this.parseVersion(line.split(' ')[2].trim());
+                    break;
+                } catch (e) {
+                // fallthrough
+                }
+            }
+            if (line.startsWith(alternatePrefix)) {
+                try {
+                    version = this.parseVersion(line.split(' ')[1].trim());
+                    break;
+                } catch (e) {
+                    // fallthrough
+                }
                 break;
             }
         }
-        if (!version) {
-            return undefined;
-        }
-        return this.parseVersion(version);
+        return version;
     }
 
     public static checkIfGameSupportsDebugger(path: string): boolean {
@@ -120,7 +139,11 @@ export class GameVersionChecker {
         }
         return this.versionSupportsDebugger(gameVersion);
     }
+
     public static versionSupportsDebugger(version: GameVersion): boolean {
+        if (version === undefined) {
+            return false;
+        }
         return this.isGreaterThanOrEqualTo(version, this.DEBUGGER_VERSION);
     }
 }

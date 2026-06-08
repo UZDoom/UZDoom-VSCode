@@ -4,12 +4,15 @@ import findProcess from 'find-process';
 import { lsof, ProcessInfo } from 'list-open-files';
 import path from 'path';
 import { CancellationToken, DummyCancellationToken } from './IDEInterface';
+import { GameVersion, GameVersionChecker } from '../debug/GameVersionChecker';
 
 export enum DebugLaunchState {
     success,
     launcherError,
     gameFailedToStart,
     gameExitedBeforeOpening,
+    gameVersionNotDetected,
+    gameVersionNotSupported,
     multipleGamesRunning,
     cancelled,
 }
@@ -33,6 +36,7 @@ export class DebugLauncherService implements IDebugLauncherService {
     // TODO: Move this stuff into the global Context
     private cancellationToken: CancellationToken | undefined;
     public launcherProcess: ChildProcess | undefined;
+    public gameVersion: GameVersion | undefined;
     private _gamePID: number | undefined;
     private gameName: string = '';
     // @ts-ignore
@@ -49,6 +53,7 @@ export class DebugLauncherService implements IDebugLauncherService {
     constructor() {
     }
     public reset() {
+        this.gameVersion = undefined;
         this.launcherProcess = undefined;
         this._gamePID = undefined;
         this.gameName = "";
@@ -217,8 +222,28 @@ export class DebugLauncherService implements IDebugLauncherService {
         return !this.launcherProcess || (this.launcherProcess.exitCode !== null && this.launcherProcess.exitCode !== 0)
     }
 
-
-
+    async waitFor(conditionCheckCallback: () => boolean | Promise<boolean>, interval: number = 100, connectionTimeout: number = 15000, intervalCallback: () => boolean | Promise<boolean> = () => true) {
+        let result = false;
+        const startTime: number = new Date().getTime();
+        while (true) {
+            const currentTime = new Date().getTime();
+            const timedOut = currentTime > startTime + connectionTimeout;
+            if (timedOut) {
+                return false;
+            } else {
+                const intervalStartTime = new Date().getTime();
+                result = await conditionCheckCallback();
+                if (result || !(await intervalCallback())) {
+                    break;
+                }
+                const intervalElapsedTime = new Date().getTime() - intervalStartTime;
+                if (intervalElapsedTime < interval) {
+                    await new Promise((resolve) => setTimeout(resolve, interval - intervalElapsedTime));
+                }
+            }
+        }
+        return result;
+    }
 
     /**
      *
@@ -228,30 +253,16 @@ export class DebugLauncherService implements IDebugLauncherService {
      * @param interval the interval to wait between checks
      * @returns true if the port was opened, false if we timed out
      */
-    async waitForPort(port: number, connectionTimeout: number = 15000, intervalCallback: () => boolean | Promise<boolean> = () => true, interval: number = 1000) {
-        let result = false;
-        const startTime: number = new Date().getTime();
-        while (true) {
-            const currentTime = new Date().getTime();
-            const timedOut = currentTime > startTime + connectionTimeout;
-            if (timedOut) {
-                return false;
-            } else {
-                result = (
-                    await waitPort({
-                        host: 'localhost',
-                        port: port,
-                        timeout: Math.min(interval, connectionTimeout),
-                        interval: Math.min(interval, connectionTimeout),
-                        output: 'silent',
-                    })
-                ).open;
-                if (result || !(await intervalCallback())) {
-                    break;
-                }
-            }
-        }
-        return result;
+    async waitForPort(port: number, connectionTimeout: number = 15000, intervalCallback: () => boolean | Promise<boolean> = () => true, interval: number = 1000): Promise<boolean> {
+        return await this.waitFor(async () => {
+            return (await waitPort({
+                host: 'localhost',
+                port: port,
+                timeout: Math.min(interval, connectionTimeout),
+                interval: Math.min(interval, connectionTimeout),
+                output: 'silent',
+            })).open;
+        }, 0, connectionTimeout, intervalCallback);
     }
 
     /**
@@ -261,24 +272,16 @@ export class DebugLauncherService implements IDebugLauncherService {
      * @param interval the interval to wait between checks
      * @returns true if the port was opened, false if we timed out
      */
-    async waitForGameToStart(connectionTimeout: number = 15000, intervalCallback: () => boolean | Promise<boolean> = () => true) {
-        let result = false;
-        const startTime: number = new Date().getTime();
-        while (true) {
-            const currentTime = new Date().getTime();
-            const timedOut = currentTime > startTime + connectionTimeout;
-            if (timedOut) {
-                return false;
-            } else {
-                result = await this.getGameIsRunning(this.gameName);
-                if (result || !(await intervalCallback())) {
-                    break;
-                }
-            }
-        }
-        return result;
+    async waitForGameToStart(connectionTimeout: number = 15000, intervalCallback: () => boolean | Promise<boolean> = () => true): Promise<boolean> {
+        return await this.waitFor(async () => {
+            return await this.getGameIsRunning(this.gameName);
+        }, 0, connectionTimeout, intervalCallback);
     }
 
+
+    CountInString(str: string, pattern: string): number {
+        return (str.match(new RegExp(pattern, 'g')) || []).length;
+    }
 
     async runLauncher(
         launcherCommand: LaunchCommand,
@@ -350,12 +353,19 @@ export class DebugLauncherService implements IDebugLauncherService {
         };
         const _handleBad = async () => {
             this.removeProcessListeners();
+            if (cancellationToken.isCancellationRequested) {
+                await this.tearDownAfterDebug();
+                this._errorString = '';
+                return DebugLaunchState.cancelled;
+            }
             if (_processHasExited()) {
                 const previousErrorString = this._errorString;
                 exitCode = this.launcherProcess?.exitCode || exitCode || -1
                 this._errorString = `Launcher process exited with error code ${exitCode}.`;
                 if (previousErrorString && previousErrorString !== this._errorString) {
                     this._errorString += `\nReason: ${previousErrorString}`
+                } else if (_stdErr) {
+                    this._errorString += `\nReason: ${_stdErr}`;
                 }
                 const errOutput = _stdErr || _output;
                 this._errorString += `\n\ncmd: ${cmd}\n\nargs: ${args.join(' ')}`;
@@ -364,11 +374,7 @@ export class DebugLauncherService implements IDebugLauncherService {
                 }
                 return DebugLaunchState.launcherError;
             }
-            if (cancellationToken.isCancellationRequested) {
-                await this.tearDownAfterDebug();
-                this._errorString = '';
-                return DebugLaunchState.cancelled;
-            }
+            await this.tearDownAfterDebug();
             return DebugLaunchState.gameFailedToStart;
         };
         if (_checkBad()) {
@@ -392,6 +398,22 @@ export class DebugLauncherService implements IDebugLauncherService {
             return DebugLaunchState.multipleGamesRunning;
         }
         this._gamePID = gamePIDs[0];
+
+        // wait until we have at least one line of output
+        if (!(await this.waitFor(() => this.CountInString(_stdOut, '\n') > 0, 100, 15000, () => !_checkBad()))) {
+            return await _handleBad();
+        }
+        this.gameVersion = GameVersionChecker.getGameVersionFromOutput(_stdOut);
+        if (!this.gameVersion) {
+            await this.tearDownAfterDebug();
+            this._errorString = `Could not determine ${this.gameName} version.`;
+            return DebugLaunchState.gameVersionNotDetected;
+        }
+        if (!GameVersionChecker.versionSupportsDebugger(this.gameVersion)) {
+            await this.tearDownAfterDebug();
+            this._errorString = `${this.gameName} version ${GameVersionChecker.toString(this.gameVersion)} does not support debugging. Please grab the latest nightly build from https://devbuilds.drdteam.org/uzdoom/.`;
+            return DebugLaunchState.gameVersionNotSupported;
+        }
 
         // game has launched, now we wait for the port to open
         const connectionTimeout = 15000;
