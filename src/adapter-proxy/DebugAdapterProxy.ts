@@ -208,6 +208,8 @@ const DEFAULT_DEBUGGER_LOCALE: DebuggerLocale = {
 //     (msg: string, ...args: any[]): void;
 // }
 
+const USE_TIMESTAMPS = true;
+
 class ConsoleStream implements DestinationStream {
     public write(msg: string) {
         console.log(msg);
@@ -219,6 +221,9 @@ class ConsoleStream implements DestinationStream {
             }
             msg = obj;
             obj = undefined;
+        }
+        if (USE_TIMESTAMPS) {
+            msg = `[${new Date().toISOString()}] ${msg}`;
         }
         if (level === 'fatal' || level === 'error' || level === 'warn') {
             console.error(colorizeMessage(true, msg), ...args);
@@ -683,6 +688,7 @@ export abstract class DebugAdapterProxy implements VSCodeDebugAdapter {
         }
         // set the rest
         this.clientCaps = nargs;
+        // Set the capabilities the server expects in the args to pass to the server
         args.adapterID = this.clientCaps.adapterID;
         args.columnsStartAt1 = this.debuggerLocale.columnsStartAt1;
         args.linesStartAt1 = this.debuggerLocale.linesStartAt1;
