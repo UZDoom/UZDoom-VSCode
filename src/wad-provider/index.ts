@@ -3,8 +3,10 @@ import * as vscode from 'vscode';
 
 import { WadFileSystemProvider } from './WadFileSystemProvider';
 
+const IS_READONLY = true;
+
 function mount(uri: vscode.Uri) {
-    const wadUri = vscode.Uri.parse(`wad:${uri.fsPath}`);
+    const wadUri = WadFileSystemProvider.CreateWadUri(uri.fsPath, '');
 
     if (vscode.workspace.getWorkspaceFolder(wadUri) === undefined) {
         vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders!.length, 0, {
@@ -15,7 +17,7 @@ function mount(uri: vscode.Uri) {
 }
 
 function unmount(uri: vscode.Uri): void {
-    const wadUri = vscode.Uri.parse(`wad:${uri.fsPath}`);
+    const wadUri = WadFileSystemProvider.CreateWadUri(uri.fsPath, '');
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(wadUri);
     if (!workspaceFolder) {
@@ -42,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
     let provider = new WadFileSystemProvider();
     context.subscriptions.push(vscode.workspace.registerFileSystemProvider(`wad`, provider, {
         isCaseSensitive: false,
-        isReadonly: true,
+        isReadonly: IS_READONLY,
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`wad.mountWadFile`, (uri: vscode.Uri) => {

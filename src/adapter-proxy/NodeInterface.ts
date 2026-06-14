@@ -37,13 +37,17 @@ export class NodeFileAccessor implements FileAccessor {
             roots = [process.cwd()];
         }
         for (const root of roots) {
-            // append root to include
-            let match = await glob(include, {
-                ignore: exclude,
-                absolute: absolute,
-                cwd: root
-            });
-            matches.push(...match);
+            try {
+                // append root to include
+                let match = await glob(include, {
+                    ignore: exclude,
+                    absolute: absolute,
+                    cwd: root
+                });
+                matches.push(...match);
+            } catch (e) {
+                console.error(`Error finding files in ${root}: ${e}`);
+            }
             if (maxResults && matches.length >= maxResults) {
                 break;
             }

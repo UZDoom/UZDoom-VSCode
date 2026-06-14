@@ -27,7 +27,7 @@ export default class Reader
 	{
 		if(to < 0 || to >= this.view!.byteLength)
 			throw new RangeError("Attempted to seek out of range");
-		
+
 		this.cursor = to;
 	}
 
@@ -53,12 +53,12 @@ export default class Reader
 	{
 		if(length == 0)
 			return "";
-		
+
 		const chars: number[] = [];
 
 		for(let i = 0; i < length; i++)
 			chars.push(this.readUint8());
-		
+
 		return String.fromCharCode.apply(String, chars);
 	}
 
@@ -68,7 +68,7 @@ export default class Reader
 
 		if(!(type in WadType))
 			throw new ParseError("Invalid type in WAD header");
-		
+
 		this.wad.type			= type;
 
 		this.numLumps			= this.readInt32();
@@ -84,7 +84,7 @@ export default class Reader
 		this.seek(this.dictionaryOffset!);
 
 		let totalLength = 0;
-		
+
 		for(let i = 0; i < this.numLumps!; i++)
 		{
 			let position	= this.readInt32();
@@ -92,11 +92,8 @@ export default class Reader
 
 			totalLength += length;
 
-			let name		= this.readString(8);
-			let lump		= LumpFactory.createFromName(name);
-
-			lump.content = this.input!.slice(position, position + length);
-
+			const name = this.readString(8);
+            let lump = LumpFactory.createFromName(name, i, this.input!.slice(position, position + length));
 			// console.debug(`Read lump ${lump.name} will be at position 0x${position.toString(16)} with length 0x${length.toString(16)}`);
 
 			lumps.push(lump);
@@ -115,7 +112,7 @@ export default class Reader
 	{
 		this.input = input;
 		this.view = new DataView(input);
-		
+
 		this.rewind();
 
 		try{
@@ -129,7 +126,7 @@ export default class Reader
 				throw new ParseError("End of file reached unexpectedly");
 			else
 				throw e;
-			
+
 		}
 	}
 

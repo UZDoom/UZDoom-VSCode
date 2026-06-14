@@ -10,16 +10,16 @@ export default class LumpFactory
 		LumpFactory.classesByName[name.toUpperCase()] = constructor;
 	}
 
-	static createFromName(name: string)
+	static createFromName(name: string, index: number, content: ArrayBuffer)
 	{
 		let result: Lump;
 
-		const trimmed = name.replace(/\0.*$/g,'').toUpperCase();
+		const trimmed = Lump.sanitizeName(name).toUpperCase();
 
 		if(!(trimmed in LumpFactory.classesByName))
-			result = new Lump();
+			result = new Lump(index, name, content);
 		else
-			result = new LumpFactory.classesByName[trimmed]();
+			result = new LumpFactory.classesByName[trimmed](index, name, content);
 
 		result.name = name;
 

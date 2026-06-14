@@ -1,17 +1,36 @@
 import { VirtualFS, PosixFS, npath } from '@yarnpkg/fslib';
 import { ZipOpenFS } from '@yarnpkg/libzip';
 import * as vscode from 'vscode';
-const PK3_EXTENSIONS = ['.pk3', '.pk7', '.zip', '.ipk3', '.ipk7'];
+
+import { PK3_EXTENSIONS, PK3_SCHEME } from './common';
+import { pathToURI, URIToPath } from '../common/ProviderHelpers';
+
 export class Pk3FSProvider implements vscode.FileSystemProvider {
+    public static readonly PK3_EXTENSIONS = PK3_EXTENSIONS;
+
     private readonly fs = new PosixFS(
         new VirtualFS({
             baseFs: new ZipOpenFS({
                 useCache: true,
-                maxOpenFiles: 80,
+                maxOpenFiles: 200,
                 fileExtensions: PK3_EXTENSIONS
             }),
         }),
     );
+
+    static handlesArchive(path: vscode.Uri | string): boolean {
+        path = typeof path === 'string' ? path : path.fsPath;
+        const ext = npath.extname(path);
+        return PK3_EXTENSIONS.includes(ext);
+    }
+
+    static pathToURI(pk3_path: string, file_path: string = ''): vscode.Uri {
+        return pathToURI(PK3_SCHEME, pk3_path, file_path);
+    }
+
+    static URIToPath(uri: vscode.Uri): string {
+        return URIToPath(uri);
+    }
 
     stat(uri: vscode.Uri): vscode.FileStat {
         const stat: any = this.fs.statSync(uri.fsPath);

@@ -8,6 +8,7 @@ import { DebugLauncherService, DebugLaunchState, LaunchCommand } from '../adapte
 import { DEFAULT_PORT, isBuiltinPK3File, ProjectItem, GAME_NAME, getLaunchCommand as getGameLaunchCommand } from './GameDefs';
 import { VSCodeFileAccessor as WorkspaceFileAccessor } from '../adapter-proxy/VSCodeInterface';
 import { windowManager } from "../WindowManager";
+import { GameVersionChecker } from './GameVersionChecker';
 
 const debugLauncherService = new DebugLauncherService();
 const workspaceFileAccessor = new WorkspaceFileAccessor();

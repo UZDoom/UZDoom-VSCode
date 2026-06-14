@@ -5,18 +5,23 @@ import { registerTerminalLinkProvider } from './TerminalLinkProvider';
 import { Pk3FSProvider } from './Pk3FSProvider';
 
 function mount(uri: vscode.Uri) {
-    const pk3Uri = vscode.Uri.parse(`pk3:${uri.fsPath}`);
+    if (!Pk3FSProvider.handlesArchive(uri)) {
+        throw new Error(`Cannot mount ${uri.fsPath}: not a valid PK3 file`);
+    }
+    const base = npath.basename(uri.fsPath);
+    const pk3Uri = Pk3FSProvider.pathToURI(uri.fsPath, '');
 
+    // throw new Error(`Test URI: ${pk3Uri.toString()}, FS Path: ${fsPath}`);
     if (vscode.workspace.getWorkspaceFolder(pk3Uri) === undefined) {
         vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders!.length, 0, {
-            name: npath.basename(pk3Uri.fsPath),
+            name: base,
             uri: pk3Uri,
         });
     }
 }
 
 function unmount(uri: vscode.Uri): void {
-    const pk3Uri = vscode.Uri.parse(`pk3:${uri.fsPath}`);
+    const pk3Uri = Pk3FSProvider.pathToURI(uri.fsPath, '');
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(pk3Uri);
     if (!workspaceFolder) {

@@ -6,8 +6,8 @@ import Lump from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
 import * as path from "path";
 
-const EXTENSIONS = ['.wad', '.iwad'];
-
+import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
+import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
 /**
  * A read-only file system provider for WAD files.
  */
@@ -18,34 +18,14 @@ export class WadFileSystemProvider implements FileSystemProvider {
     private Wads: Map<string, Wad> = new Map();
 
     public static CreateWadUri(wadPath: string, entryPath: string): Uri {
-        const dspath = encodeURI(`wad://${path.normalize(wadPath)}/${path.normalize(entryPath)}`);
-        return Uri.parse(dspath);
+        return pathToURI(WAD_SCHEME, wadPath, entryPath);
     }
 
     private parseWadUri(uri: Uri): { wadPath: string; entryPath: string } {
-        if (!uri.scheme.startsWith('wad')) {
+        if (uri.scheme !== WAD_SCHEME) {
             throw new Error('Invalid WAD URI format');
         }
-        const uriString = uri.path;
-        // find the last instance of ".wad"
-        let wadpos = -1;
-        let ext = '';
-        for (let _ext of EXTENSIONS) {
-            const pos = uriString.toLowerCase().lastIndexOf(_ext);
-            if (pos != -1 && pos > wadpos) {
-                wadpos = pos;
-                ext = _ext;
-            }
-        }
-        if (wadpos === -1) {
-            throw new Error('Invalid WAD URI format');
-        }
-        const wadPath = uriString.substring(0, wadpos + ext.length);
-        const entryPath = uriString.substring(wadpos + ext.length + 1);
-
-        if (wadPath.length === 0) {
-            throw new Error('Invalid WAD URI format');
-        }
+        const [wadPath, entryPath] = URIToArchivePathParts(uri, 1, EXTENSIONS);
         return {
             wadPath: wadPath,
             entryPath: entryPath || ''
@@ -54,10 +34,14 @@ export class WadFileSystemProvider implements FileSystemProvider {
 
     private async getWadFile(wadPath: string): Promise<Wad> {
         if (!this.Wads.has(wadPath)) {
+            try {
             const wad = new Wad();
             const buffer = readFileSync(wadPath);
             wad.load(buffer.buffer);
             this.Wads.set(wadPath, wad);
+            } catch (e) {
+                throw new Error(`Failed to load WAD file ${wadPath}: ${e}`);
+            }
         }
         return this.Wads.get(wadPath)!;
     }
@@ -123,12 +107,12 @@ export class WadFileSystemProvider implements FileSystemProvider {
         }
 
         if (!entry) {
-            entry = new Lump();
-            entry.name = entryPath;
+            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer);
             wad.lumps.push(entry);
+        } else {
+            entry.content = content.buffer as ArrayBuffer;
         }
 
-        entry.content = content.buffer as ArrayBuffer;
         await fs.writeFile(wadPath, Buffer.from(wad.save()));
     }
 

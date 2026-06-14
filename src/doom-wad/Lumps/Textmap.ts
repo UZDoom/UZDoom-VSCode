@@ -80,7 +80,7 @@ export default class Textmap extends Lump
 	private tokenize(string: string)
 	{
 		const lexer = new Tokenizr();
-		
+
 		lexer.rule(/true|false/, (ctx, match) => {
 			ctx.accept("boolean", match[0] === "true");
 		});
@@ -93,7 +93,7 @@ export default class Textmap extends Lump
 			ctx.accept("float", parseFloat(match[0]))
 		});
 
-		[/[+-]?[0-9]+/, /0[0-9]+/, /0x[0-9A-Fa-f]+/].forEach(regex => 
+		[/[+-]?[0-9]+/, /0[0-9]+/, /0x[0-9A-Fa-f]+/].forEach(regex =>
 			lexer.rule(regex, (ctx, match) => {
 				ctx.accept("integer", parseInt(match[0]))
 			})
@@ -139,7 +139,7 @@ export default class Textmap extends Lump
 	private parseAssignment(next: () => Token): AssignmentExpression
 	{
 		const name = next();
-		
+
 		if(name.type !== "identifier")
 			throw new ParseTextmapError("Expected assignment expression to begin with an identifier");
 
@@ -177,7 +177,7 @@ export default class Textmap extends Lump
 			case "sidedef":
 			case "sector":
 				break;
-			
+
 			default:
 				throw new ParseTextmapError("Invalid block type");
 		}
@@ -210,7 +210,7 @@ export default class Textmap extends Lump
 	{
 		if(tokens.length === 0)
 			throw new ParseTextmapError("Expected one or more tokens");
-	
+
 		let cursor = 0;
 
 		const peek = () => {
@@ -281,6 +281,6 @@ export default class Textmap extends Lump
 
 		});
 
-		return new TextEncoder().encode(lines.join("\n"));
+		return new TextEncoder().encode(lines.join("\n")).buffer;
 	}
 }
