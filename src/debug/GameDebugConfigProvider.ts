@@ -1,6 +1,6 @@
 import { DEFAULT_PORT, GAME_LABEL_NAME, GAME_NAME, isBuiltinPK3File, ProjectItem, searchForGameBinary } from "./GameDefs";
 import * as vscode from 'vscode';
-import path from "path";
+import { gzpath as path } from "./GameDefs"
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
 import { VSCodeFileAccessor as WorkspaceFileAccessor } from '../adapter-proxy/VSCodeInterface';
 
