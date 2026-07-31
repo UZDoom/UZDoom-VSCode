@@ -47,19 +47,19 @@ export default class DoomGfxDocument extends WadDocument {
     static parseHeader(content: ArrayBuffer): PatchHeader {
         const view = new DataView(content);
         return {
-            width: view.getInt16(0),
-            height: view.getInt16(2),
-            left: view.getInt16(4),
-            top: view.getInt16(6),
+            width: view.getInt16(0, true),
+            height: view.getInt16(2, true),
+            left: view.getInt16(4, true),
+            top: view.getInt16(6, true),
         };
     }
 
     static parseColumnOffsets(content: ArrayBuffer): number[] {
         const view = new DataView(content);
-        const width = view.getInt16(0);
+        const width = view.getInt16(0, true);
         const columnOffsets: number[] = [];
         for (let offset = 8; offset < 8 + 4 * width; offset += 4) {
-            columnOffsets.push(view.getUint32(offset));
+            columnOffsets.push(view.getUint32(offset, true));
         }
         return columnOffsets;
     }
@@ -119,7 +119,7 @@ export default class DoomGfxDocument extends WadDocument {
 
                 // Get no. of pixels
                 bits++;
-                let n_pix = view.getUint16(bits);
+                let n_pix = view.getUint8(bits);
 
                 // If this is a Pleiades sky, the height is 256.
                 if (pleiadeshack)

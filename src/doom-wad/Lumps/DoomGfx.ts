@@ -6,7 +6,7 @@ export default class DoomGfxLump extends Lump {
     private playpal: PlayPal;
     static isThisFormat(name: string, content: ArrayBuffer, loadMode: LoadMode): MatchResult {
         if (content.byteLength < PatchHeaderSize) return MatchResult.false;
-        if (loadMode === LoadMode.sprites || loadMode === LoadMode.flats) return MatchResult.true;
+        if (loadMode === LoadMode.sprites || loadMode === LoadMode.walls) return MatchResult.true;
         if (loadMode !== LoadMode.normal) return MatchResult.false;
         const header = DoomGfxDocument.parseHeader(content);
         if (!(header.height > 0 && header.height < 4096 && header.width > 0 && header.width < 4096
