@@ -1,7 +1,6 @@
 import Lump, { LoadMode, MatchResult } from "./Lump";
-import DoomGfxDocument, { PatchHeaderSize, PatchHeader } from "../Documents/DoomGfx";
+import DoomGfxDocument, { PatchHeaderSize } from "../Documents/DoomGfx";
 import PlayPal from "./PlayPal";
-import WadDocument from "../Documents/WadDocument";
 export default class DoomGfxLump extends Lump {
 
     private playpal: PlayPal;

@@ -38,7 +38,7 @@ export default class Writer
 	{
 		if(value < 0 || value > 0xFF)
 			throw new RangeError(`Invalid byte value ${value}`);
-		
+
 		this.view!.setUint8(this.cursor!, value);
 
 		this.cursor!++;
@@ -48,7 +48,7 @@ export default class Writer
 	{
 		if(value < 0 || value > 0x7FFFFFFF)
 			throw new RangeError(`Invalid 32-bit value ${value}`);
-		
+
 		this.view!.setInt32(this.cursor!, value, true);
 
 		this.cursor! += 4;
@@ -75,7 +75,7 @@ export default class Writer
 	{
 		if(string.length > length)
 			throw new RangeError("String exceeds maximum specified padded string length");
-		
+
 		this.writeString(string);
 
 		for(let i = string.length; i < length; i++)
@@ -113,12 +113,12 @@ export default class Writer
 	private writeLumpsAndDictionary(): void
 	{
 		const lumpPositions: number[] = [];
-		let count = 1;
+        // let count = 1;
 
 		for(const lump of this.wad.lumps)
 		{
 			// console.debug(`Writing lump ${count} / ${this.wad.lumps.length} at 0x${this.cursor.toString(16)}`);
-			count++;
+            // count++;
 
 			lumpPositions.push(this.cursor!);
 
@@ -137,7 +137,7 @@ export default class Writer
 		{
 			// NB: Somewhere I read that virtual lumps (such as F_START) only exist in the dictionary, having a size of 0 and that therefore offset value is nonsensical and often 0, however, I found Slade does preserve these offsets - we mirror this behaviour and write the position.
 			this.writeInt32(lumpPositions[index]);
-			
+
 			this.writeInt32(lump.content.byteLength);
 			this.writePaddedString(lump.name, 8);
 

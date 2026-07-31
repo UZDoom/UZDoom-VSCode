@@ -154,8 +154,8 @@ export default class WadImageViewProvider implements vscode.CustomReadonlyEditor
         }
         const doomGfxDocument = document as DoomGfxDocument;
 
-        const modelUri = webviewPanel.webview.asWebviewUri(doomGfxDocument.uri);
-        const modelUriString = modelUri.toString();
+        // const modelUri = webviewPanel.webview.asWebviewUri(doomGfxDocument.uri);
+        // const modelUriString = modelUri.toString();
 
         let options = {
             enableScripts: true,

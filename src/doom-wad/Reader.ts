@@ -130,7 +130,7 @@ export default class Reader
 
 		this.seek(this.dictionaryOffset!);
 
-		let totalLength = 0;
+        // let totalLength = 0;
         let mode: LoadMode = LoadMode.normal;
 
 		for(let i = 0; i < this.numLumps!; i++)
@@ -138,7 +138,7 @@ export default class Reader
 			let position	= this.readInt32();
 			let length		= this.readInt32();
 
-			totalLength += length;
+            // totalLength += length;
 
             const name = Lump.trimName(this.readString(8));
             switch (name) {
