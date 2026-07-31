@@ -23,11 +23,11 @@
     "devDependencies": {
         "@types/chalk": "^2.2.0",
         "@types/glob": "^7.2.0",
+        "@types/lodash.get": "^4.4.9",
         "@types/mocha": "^9.1.0",
         "@types/node": "^14.14.37",
         "@types/split2": "^4.2.1",
         "@types/vscode": "^1.52.0",
-        "@types/lodash.get": "^4.4.9",
         "@typescript-eslint/eslint-plugin": "^5.17.0",
         "@typescript-eslint/parser": "^5.17.0",
         "@vscode/debugadapter": "^1.56.0",
@@ -47,6 +47,7 @@
         "wait-port": "^1.1.0"
     },
     "dependencies": {
+        "@lunapaint/png-codec": "^0.2.0",
         "@johnlindquist/node-window-manager": "^1.0.24",
         "@yarnpkg/fslib": "^3.1.2",
         "@yarnpkg/libzip": "^3.1.1",
@@ -1039,9 +1040,7 @@
                         }
                     }
                 },
-                "configurationSnippets": [
-
-                ]
+                "configurationSnippets": []
             }
         ],
         "commands": [

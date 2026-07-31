@@ -1,7 +1,14 @@
 import Wad, { WadType } from "./Wad";
 import ParseError from "./Exceptions/ParseError";
-import Lump from "./Lumps/Lump";
+import Lump, { LoadMode, LumpName } from "./Lumps/Lump";
 import LumpFactory from "./Lumps/LumpFactory";
+
+interface LumpInfo {
+    name: string;
+    position: number;
+    length: number;
+    mode: LoadMode;
+}
 
 export default class Reader
 {
@@ -77,13 +84,54 @@ export default class Reader
 		// console.debug(`Read WAD type ${type} with ${this.numLumps} lumps, dictionary offset at 0x${this.dictionaryOffset.toString(16)}`);
 	}
 
+    private isMapLump(name: string): boolean {
+        switch (name) {
+            // case LumpName.ENDMAP:
+            case LumpName.ZNODES:
+            case LumpName.SCRIPTS:
+            case LumpName.DIALOGUE:
+            case LumpName.LIGHTMAP:
+            case LumpName.MACROS:
+            case LumpName.LIGHTS:
+            case LumpName.BLOCKMAP:
+            case LumpName.VERTEXES:
+            case LumpName.SECTORS:
+            case LumpName.SIDEDEFS:
+            case LumpName.LINEDEFS:
+            case LumpName.SSECTORS:
+            case LumpName.NODES:
+            case LumpName.SEGS:
+            case LumpName.LEAFS:
+            case LumpName.REJECT:
+            case LumpName.THINGS:
+            case LumpName.TEXTMAP:
+            case LumpName.BEHAVIOR:
+            case LumpName.ZSCRIPT:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private isSpecialLump(name: string): boolean {
+        switch (name) {
+            case LumpName.PLAYPAL:
+            case LumpName.COLORMAP:
+                return true;
+            default:
+                return false;
+        }
+    }
+
 	private readDictionaryAndLumps(): void
 	{
 		const lumps: Lump[] = [];
+        const lumpsInfo: LumpInfo[] = [];
 
 		this.seek(this.dictionaryOffset!);
 
 		let totalLength = 0;
+        let mode: LoadMode = LoadMode.normal;
 
 		for(let i = 0; i < this.numLumps!; i++)
 		{
@@ -92,10 +140,64 @@ export default class Reader
 
 			totalLength += length;
 
-			const name = this.readString(8);
-            let lump = LumpFactory.createFromName(name, i, this.input!.slice(position, position + length));
-			// console.debug(`Read lump ${lump.name} will be at position 0x${position.toString(16)} with length 0x${length.toString(16)}`);
+            const name = Lump.trimName(this.readString(8));
+            switch (name) {
+                case LumpName.FF_START:
+                case LumpName.F_START:
+                case LumpName.F1_START:
+                case LumpName.F2_START:
+                case LumpName.F3_START:
+                    mode = LoadMode.flats;
+                    break;
+                case LumpName.SS_START:
+                case LumpName.S_START:
+                    mode = LoadMode.sprites;
+                    break;
+                case LumpName.PP_START:
+                case LumpName.P_START:
+                case LumpName.P1_START:
+                case LumpName.P2_START:
+                case LumpName.P3_START:
+                    mode = LoadMode.walls;
+                    break;
+                case LumpName.FF_END:
+                case LumpName.F_END:
+                case LumpName.F1_END:
+                case LumpName.F2_END:
+                case LumpName.F3_END:
+                case LumpName.SS_END:
+                case LumpName.S_END:
+                case LumpName.P_END:
+                case LumpName.P1_END:
+                case LumpName.P2_END:
+                case LumpName.P3_END:
+                    mode = LoadMode.normal;
+                    break;
+                default:
+                    break;
+            }
+            lumpsInfo.push({ name, position, length, mode });
+        }
+        let specialLumps: { [name: string]: Lump } = {};
+        for (let i = 0; i < lumpsInfo.length; i++) {
+            const { name, position, length, mode } = lumpsInfo[i];
+            let newMode = mode;
+            if (length === 0 && mode === LoadMode.normal) {
+                if (i + 1 < lumpsInfo.length && this.isMapLump(lumpsInfo[i + 1].name)) {
+                    newMode = LoadMode.map;
+                    for (let j = i + 1; j < lumpsInfo.length; j++) {
+                        if (!this.isMapLump(lumpsInfo[j].name)) {
+                            break;
+                        }
+                        lumpsInfo[j].mode = LoadMode.map;
+                    }
+                }
+            }
+            let lump = LumpFactory.createFromName(name, i, this.input!.slice(position, position + length), newMode, specialLumps);
 
+            if (this.isSpecialLump(name)) {
+                specialLumps[name] = lump;
+            }
 			lumps.push(lump);
 		}
 

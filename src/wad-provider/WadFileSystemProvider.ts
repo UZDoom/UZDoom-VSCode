@@ -2,9 +2,8 @@ import { Emitter } from "../adapter-proxy/IDEInterface"
 import { FileSystemProvider, FileStat, FileType, Event, FileChangeEvent, Disposable, Uri } from 'vscode';
 import Wad from "../doom-wad/Wad";
 import * as fs from 'fs/promises';
-import Lump from "../doom-wad/Lumps/Lump";
+import Lump, { LoadMode } from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
-import * as path from "path";
 
 import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
 import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
@@ -107,7 +106,7 @@ export class WadFileSystemProvider implements FileSystemProvider {
         }
 
         if (!entry) {
-            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer);
+            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer, LoadMode.normal);
             wad.lumps.push(entry);
         } else {
             entry.content = content.buffer as ArrayBuffer;
