@@ -1,3 +1,4 @@
+import { MatchResult } from "../Lumps/Lump";
 import PlayPal from "../Lumps/PlayPal";
 import ImageDocument from "./ImageDocument";
 import WadDocument from "./WadDocument";
@@ -9,6 +10,13 @@ export default class DoomFlatDocument extends WadDocument implements ImageDocume
 
     readonly width = 64;
     readonly height = 64;
+
+    static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
+        if (content.byteLength === 4096) {
+            return MatchResult.true;
+        }
+        return MatchResult.false;
+    }
 
     constructor(uri: any, data: ArrayBuffer, extra: { PLAYPAL: PlayPal }) {
         super(uri, data, extra);

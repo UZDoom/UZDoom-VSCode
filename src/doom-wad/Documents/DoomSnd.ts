@@ -1,3 +1,4 @@
+import { MatchResult } from "../Lumps/Lump";
 import WadDocument from "./WadDocument";
 
 export interface DoomSndHeader {
@@ -9,6 +10,16 @@ export interface DoomSndHeader {
 export default class DoomSndDocument extends WadDocument {
     constructor(uri: any, data: ArrayBuffer, extra: any) {
         super(uri, data, extra);
+    }
+
+    static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
+        if (content.byteLength > 8) {
+            const header = DoomSndDocument.parseHeader(content);
+            if ((header.three == 3 || header.three == 0x300) && header.samples <= (content.byteLength - 8) && header.samples > 4 && header.samplerate >= 8000) {
+                return MatchResult.true;
+            }
+        }
+        return MatchResult.false;
     }
 
     static parseHeader(content: ArrayBuffer): DoomSndHeader {

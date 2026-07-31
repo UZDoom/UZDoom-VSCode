@@ -1,7 +1,13 @@
+import { MatchResult } from "../Lumps/Lump";
+
 export default class WadDocument {
     protected _uri: any;
     protected data: ArrayBuffer;
     protected extra: any;
+
+    static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
+        return MatchResult.false;
+    }
 
     constructor(uri: any, data: ArrayBuffer, extra: any) {
         this.uri = uri;

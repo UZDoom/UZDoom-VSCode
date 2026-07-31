@@ -2,6 +2,7 @@ import WadDocument from "./WadDocument";
 import PlayPal from "../Lumps/PlayPal";
 import { encodePng, IEncodedPng } from "@lunapaint/png-codec";
 import ImageDocument from "./ImageDocument";
+import { MatchResult } from "../Lumps/Lump";
 
 export interface PatchHeader {
     width: number; // int16
@@ -31,6 +32,33 @@ export default class DoomGfxDocument extends WadDocument implements ImageDocumen
 
     static getDocumentType(): string {
         return "DoomGfx";
+    }
+
+    static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
+        if (content.byteLength < PatchHeaderSize) return MatchResult.false;
+        const header = DoomGfxDocument.parseHeader(content);
+        if (!(header.height > 0 && header.height < 4096 && header.width > 0 && header.width < 4096
+            && header.top > -2000 && header.top < 2000 && header.left > -2000 && header.left < 2000)) {
+            return MatchResult.false;
+        }
+
+        if (content.byteLength < PatchHeaderSize + header.width * 4) {
+            return MatchResult.false;
+        }
+        const columnOffsets = DoomGfxDocument.parseColumnOffsets(content);
+
+        for (let i = 0; i < header.width; i++) {
+            if (columnOffsets[i] > content.byteLength || columnOffsets[i] < 8) {
+                return MatchResult.false;
+            }
+        }
+
+        const numpixels = (header.height + 2 + header.height % 2) / 2;
+        const maxcolsize = 4 + (numpixels * 5) + 1;
+        if (content.byteLength > (PatchHeaderSize + header.width * maxcolsize)) {
+            return MatchResult.unlikely;
+        }
+        return MatchResult.true;
     }
 
     constructor(uri: any, data: ArrayBuffer, extra: { PLAYPAL: PlayPal }) {
