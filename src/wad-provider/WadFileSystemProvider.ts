@@ -2,9 +2,10 @@ import { Emitter } from "../adapter-proxy/IDEInterface"
 import { FileSystemProvider, FileStat, FileType, Event, FileChangeEvent, Disposable, Uri } from 'vscode';
 import Wad from "../doom-wad/Wad";
 import * as fs from 'fs/promises';
+import * as vscode from 'vscode';
 import Lump, { LoadMode } from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
-
+import { DoomGfxDocument, DoomFlatDocument, DoomSndDocument } from "../doom-wad";
 import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
 import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
 /**
@@ -31,13 +32,53 @@ export class WadFileSystemProvider implements FileSystemProvider {
         };
     }
 
+    private async registerDefaultEditors(wad: Wad, wadPath: string) {
+        let imageLumpUris: Uri[] = [];
+        let soundLumpUris: Uri[] = [];
+        for (const lump of wad.lumps) {
+            if (lump.documentType === DoomGfxDocument.getDocumentType() || lump.documentType === DoomFlatDocument.getDocumentType()) {
+                imageLumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
+            } else if (lump.documentType === DoomSndDocument.getDocumentType()) {
+                soundLumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
+            }
+        }
+        if (imageLumpUris.length > 0 || soundLumpUris.length > 0) {
+            const SECTION = 'workbench';
+            const KEY = 'editorAssociations';
+            let config = vscode.workspace.getConfiguration(SECTION);
+            let value: Record<string, string> | undefined = config.get<Record<string, string>>(KEY);
+            if (!value) {
+                value = {};
+            } else {
+                value = Object.assign({}, value);
+            }
+            for (const key in value) {
+                if (key.startsWith('wad:')) {
+                    let uri = Uri.parse(key);
+                    let [wadPath, ..._] = URIToArchivePathParts(uri, 1, EXTENSIONS);
+                    if (!this.Wads.has(wadPath)) {
+                        delete value[key];
+                    }
+                }
+            }
+            for (const uri of imageLumpUris) {
+                value[uri.toString()] = 'uzdoom.doomImage.previewEditor';
+            }
+            for (const uri of soundLumpUris) {
+                value[uri.toString()] = 'uzdoom.doomSnd.previewEditor';
+            }
+            config.update(KEY, value, vscode.ConfigurationTarget.Workspace);
+        }
+    }
+
     private async getWadFile(wadPath: string): Promise<Wad> {
         if (!this.Wads.has(wadPath)) {
             try {
-            const wad = new Wad();
-            const buffer = readFileSync(wadPath);
-            wad.load(buffer.buffer);
-            this.Wads.set(wadPath, wad);
+                const wad = new Wad();
+                const buffer = readFileSync(wadPath);
+                wad.load(buffer.buffer);
+                await this.registerDefaultEditors(wad, wadPath);
+                this.Wads.set(wadPath, wad);
             } catch (e) {
                 throw new Error(`Failed to load WAD file ${wadPath}: ${e}`);
             }

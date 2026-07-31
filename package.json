@@ -24,16 +24,17 @@
         "@types/chalk": "^2.2.0",
         "@types/glob": "^7.2.0",
         "@types/lodash.get": "^4.4.9",
-        "@types/mocha": "^9.1.0",
+        "@types/mocha": "^9.1.1",
         "@types/node": "^14.14.37",
         "@types/split2": "^4.2.1",
-        "@types/vscode": "^1.52.0",
+        "@types/vscode": "^1.120.0",
         "@typescript-eslint/eslint-plugin": "^5.17.0",
         "@typescript-eslint/parser": "^5.17.0",
         "@vscode/debugadapter": "^1.56.0",
         "@vscode/debugadapter-testsupport": "^1.56.0",
         "await-notify": "^1.0.1",
         "base64-js": "^1.5.1",
+        "chai": "^6.2.2",
         "esbuild": "^0.14.29",
         "eslint": "^8.12.0",
         "events": "^3.3.0",
@@ -47,8 +48,8 @@
         "wait-port": "^1.1.0"
     },
     "dependencies": {
-        "@lunapaint/png-codec": "^0.2.0",
         "@johnlindquist/node-window-manager": "^1.0.24",
+        "@lunapaint/png-codec": "^0.2.0",
         "@yarnpkg/fslib": "^3.1.2",
         "@yarnpkg/libzip": "^3.1.1",
         "chalk": "^5.3.0",
@@ -59,7 +60,8 @@
         "pino-pretty": "^10.2.0",
         "split2": "^4.2.0",
         "tokenizr": "^1.0.0",
-        "vscode-languageclient": "^5.2.1"
+        "vscode-languageclient": "^5.2.1",
+        "vscode-uri": "^3.1.0"
     },
     "main": "./dist/extension.js",
     "browser": "./dist/web-extension.js",
@@ -92,6 +94,28 @@
         "onStartupFinished"
     ],
     "contributes": {
+        "customEditors": [
+            {
+                "viewType": "uzdoom.doomImage.previewEditor",
+                "displayName": "WAD Image Viewer",
+                "selector": [
+                    {
+                        "filenamePattern": "*.lmp"
+                    }
+                ],
+                "priority": "default"
+            },
+            {
+                "viewType": "uzdoom.doomSnd.previewEditor",
+                "displayName": "WAD Sound Viewer",
+                "selector": [
+                    {
+                        "filenamePattern": "*.snd"
+                    }
+                ],
+                "priority": "default"
+            }
+        ],
         "languages": [
             {
                 "id": "pk3",

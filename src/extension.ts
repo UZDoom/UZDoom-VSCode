@@ -7,7 +7,7 @@ import { activateDebugConfigSnippetsProvider } from './debug/DebugConfigSnippets
 import { registerGameDebugConfigurationProvider } from './debug/GameDebugConfigProvider';
 import { activate as activateWadProvider } from './wad-provider/index';
 import { activate as activatePk3Provider } from './pk3-provider/index';
-
+import { activate as activatePreviewers } from './previewers/extension';
 /*
  * The compile time flag 'runMode' controls how the debug adapter is run.
  * Please note: the test suite only supports 'external' mode.
@@ -15,7 +15,9 @@ import { activate as activatePk3Provider } from './pk3-provider/index';
 
 export function activate(context: vscode.ExtensionContext) {
     // Read-only WAD mounter
-    activateWadProvider(context);
+    let wadprovider = activateWadProvider(context);
+    // Previewers
+    activatePreviewers(context, wadprovider);
     // PK3 mounter
     activatePk3Provider(context);
     // Dehacked folding provider
