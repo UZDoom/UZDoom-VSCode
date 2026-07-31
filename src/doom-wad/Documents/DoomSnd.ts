@@ -1,4 +1,5 @@
 import { MatchResult } from "../Lumps/Lump";
+import { DisplayContentType } from "./ContentType";
 import WadDocument from "./WadDocument";
 
 export interface DoomSndHeader {
@@ -20,6 +21,14 @@ export default class DoomSndDocument extends WadDocument {
             }
         }
         return MatchResult.false;
+    }
+
+    static getDisplayContentType(): DisplayContentType {
+        return DisplayContentType.Wav;
+    }
+
+    get displayContentType(): DisplayContentType {
+        return DoomSndDocument.getDisplayContentType();
     }
 
     static parseHeader(content: ArrayBuffer): DoomSndHeader {

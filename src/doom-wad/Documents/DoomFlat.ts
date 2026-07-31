@@ -3,6 +3,7 @@ import PlayPal from "../Lumps/PlayPal";
 import ImageDocument from "./ImageDocument";
 import WadDocument from "./WadDocument";
 import { encodePng, IEncodedPng } from "@lunapaint/png-codec";
+import { DisplayContentType } from "./ContentType";
 
 export default class DoomFlatDocument extends WadDocument implements ImageDocument {
 
@@ -13,7 +14,7 @@ export default class DoomFlatDocument extends WadDocument implements ImageDocume
 
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
         if (content.byteLength === 4096) {
-            return MatchResult.true;
+            return MatchResult.probably;
         }
         return MatchResult.false;
     }
@@ -26,6 +27,14 @@ export default class DoomFlatDocument extends WadDocument implements ImageDocume
         } else {
             this.playpal = extra.PLAYPAL;
         }
+    }
+
+    static getDisplayContentType(): DisplayContentType {
+        return DisplayContentType.Png;
+    }
+
+    get displayContentType(): DisplayContentType {
+        return DoomFlatDocument.getDisplayContentType();
     }
 
     static getDocumentType(): string {

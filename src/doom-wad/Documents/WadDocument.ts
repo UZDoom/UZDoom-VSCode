@@ -1,4 +1,5 @@
 import { MatchResult } from "../Lumps/Lump";
+import { DisplayContentType } from "./ContentType";
 
 export default class WadDocument {
     protected _uri: any;
@@ -7,6 +8,14 @@ export default class WadDocument {
 
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
         return MatchResult.false;
+    }
+
+    static getDisplayContentType(): DisplayContentType {
+        return DisplayContentType.Unknown;
+    }
+
+    get displayContentType(): DisplayContentType {
+        return DisplayContentType.Unknown;
     }
 
     constructor(uri: any, data: ArrayBuffer, extra: any) {

@@ -6,7 +6,7 @@ export default class DoomFlatLump extends Lump {
     private playpal: PlayPal;
     static isThisFormat(name: string, content: ArrayBuffer, loadMode: LoadMode): MatchResult {
         if (loadMode === LoadMode.flats) {
-            return DoomFlatDocument.isThisFormat(name, content);
+            return DoomFlatDocument.isThisFormat(name, content) !== MatchResult.false ? MatchResult.true : MatchResult.false;
         }
         return MatchResult.false;
     }

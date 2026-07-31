@@ -3,6 +3,7 @@ import PlayPal from "../Lumps/PlayPal";
 import { encodePng, IEncodedPng } from "@lunapaint/png-codec";
 import ImageDocument from "./ImageDocument";
 import { MatchResult } from "../Lumps/Lump";
+import { DisplayContentType } from "./ContentType";
 
 export interface PatchHeader {
     width: number; // int16
@@ -32,6 +33,14 @@ export default class DoomGfxDocument extends WadDocument implements ImageDocumen
 
     static getDocumentType(): string {
         return "DoomGfx";
+    }
+
+    static getDisplayContentType(): DisplayContentType {
+        return DisplayContentType.Png;
+    }
+
+    get displayContentType(): DisplayContentType {
+        return DisplayContentType.Png;
     }
 
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
