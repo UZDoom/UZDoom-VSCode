@@ -1,10 +1,11 @@
 import Lump, { LoadMode, MatchResult } from "./Lump";
-import DoomGfxDocument from "../Documents/DoomGfx";
+import DoomGfxDocument, { PatchHeaderSize } from "../Documents/DoomGfx";
 import PlayPal from "./PlayPal";
 export default class DoomGfxLump extends Lump {
 
     private playpal: PlayPal;
     static isThisFormat(name: string, content: ArrayBuffer, loadMode: LoadMode): MatchResult {
+        if (content.byteLength < PatchHeaderSize) return MatchResult.false;
         if (loadMode === LoadMode.sprites || loadMode === LoadMode.walls) return MatchResult.true;
         if (loadMode !== LoadMode.normal) return MatchResult.false;
         return DoomGfxDocument.isThisFormat(name, content);
