@@ -2,6 +2,7 @@ import Lump, { LoadMode, MatchResult } from "./Lump";
 import Textmap from "./Textmap";
 import PlayPal from "./PlayPal";
 import DoomGfxLump from "./DoomGfx";
+import DoomFlatLump from "./DoomFlat";
 export default class LumpFactory
 {
 	private static classesByName: Record<string, typeof Lump> = {};
@@ -52,3 +53,4 @@ export default class LumpFactory
 LumpFactory.registerClassForName("TEXTMAP", Textmap);
 LumpFactory.registerClassForName("PLAYPAL", PlayPal);
 LumpFactory.registerDetectFunction(DoomGfxLump);
+LumpFactory.registerDetectFunction(DoomFlatLump);

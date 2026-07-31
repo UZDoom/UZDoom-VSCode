@@ -35,7 +35,12 @@ export default class DoomGfxLump extends Lump {
 
     constructor(index: number, name: string, content: ArrayBuffer, loadMode: LoadMode, extra: { PLAYPAL: PlayPal }) {
         super(index, name, content, loadMode);
-        this.playpal = extra.PLAYPAL;
+        if (!extra.PLAYPAL) {
+            console.warn('playpal not provided, using default playpal');
+            this.playpal = PlayPal.DefaultPlayPal;
+        } else {
+            this.playpal = extra.PLAYPAL;
+        }
     }
 
     get documentType(): string {

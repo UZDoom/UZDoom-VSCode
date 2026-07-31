@@ -1,6 +1,7 @@
 import WadDocument from "./WadDocument";
 import PlayPal from "../Lumps/PlayPal";
 import { encodePng, IEncodedPng } from "@lunapaint/png-codec";
+import ImageDocument from "./ImageDocument";
 
 export interface PatchHeader {
     width: number; // int16
@@ -10,7 +11,7 @@ export interface PatchHeader {
 }
 export const PatchHeaderSize = 8;
 
-export default class DoomGfxDocument extends WadDocument {
+export default class DoomGfxDocument extends WadDocument implements ImageDocument {
     private header: PatchHeader;
     private columnOffsets: number[];
     private playpal: PlayPal;
@@ -70,7 +71,6 @@ export default class DoomGfxDocument extends WadDocument {
         let height = this.height;
         const version = 0;
         const col_offsets = this.columnOffsets;
-        // TODO: Actually convert the DoomGfx data to a PNG image
 
         const rawSize = width * height * 4;
         const rawRGBA = new Uint8Array(rawSize);
