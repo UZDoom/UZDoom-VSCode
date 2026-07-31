@@ -7,7 +7,7 @@ import { activateDebugConfigSnippetsProvider } from './debug/DebugConfigSnippets
 import { registerGameDebugConfigurationProvider } from './debug/GameDebugConfigProvider';
 import { activate as activateWadProvider } from './wad-provider/index';
 import { activate as activatePk3Provider } from './pk3-provider/index';
-import { activate as activatePreviewers } from './previewers/extension';
+import { activate as activatePreviewers, registerAllLumpsAssociations } from './previewers/extension';
 /*
  * The compile time flag 'runMode' controls how the debug adapter is run.
  * Please note: the test suite only supports 'external' mode.
@@ -28,6 +28,8 @@ export function activate(context: vscode.ExtensionContext) {
     activateDebugConfigSnippetsProvider(context);
     // Debug adapter descriptor factory
     activateDebugAdapterDescriptorFactory(context);
+    // Register all lumps associations
+    registerAllLumpsAssociations();
 }
 
 export function deactivate() {

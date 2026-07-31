@@ -7,6 +7,7 @@ import Lump, { LoadMode } from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
 import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
 import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
+import { registerFileAssociations } from '../previewers/extension';
 /**
  * A read-only file system provider for WAD files.
  */
@@ -32,13 +33,13 @@ export class WadFileSystemProvider implements FileSystemProvider {
     }
 
     private async registerDefaultEditors(wad: Wad, wadPath: string) {
-        let lumpUris: Uri[] = [];
+        let lumpUris: Map<Uri, { name: string, type: string }> = new Map();
         for (const lump of wad.lumps) {
             if (lump.documentType !== "") {
-                lumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
+                lumpUris.set(WadFileSystemProvider.CreateWadUri(wadPath, lump.name), { name: lump.name, type: lump.documentType });
             }
         }
-        if (lumpUris.length > 0) {
+        if (lumpUris.size > 0) {
             const SECTION = 'workbench';
             const KEY = 'editorAssociations';
             let config = vscode.workspace.getConfiguration(SECTION);
@@ -57,10 +58,11 @@ export class WadFileSystemProvider implements FileSystemProvider {
                     }
                 }
             }
-            for (const uri of lumpUris) {
+            for (const [uri, _] of lumpUris) {
                 value[uri.toString()] = 'uzdoom.doomLump.previewEditor';
             }
             config.update(KEY, value, vscode.ConfigurationTarget.Workspace);
+            registerFileAssociations(lumpUris);
         }
     }
 

@@ -12,9 +12,7 @@ import { Scale, ZoomStatusBarEntry } from './zoomStatusBarEntry';
 import { WadFileSystemProvider } from '../../wad-provider/WadFileSystemProvider';
 import { contentTypeToBase64Uri } from '../util/base64';
 import ImageDocument, { MultipleImagesImageDocument } from '../../doom-wad/Documents/ImageDocument';
-import { Utils } from 'vscode-uri';
 import { WadDocument } from '../../doom-wad';
-import DocumentFactory from '../../doom-wad/Documents/DocumentFactory';
 
 export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
 
@@ -343,6 +341,11 @@ export function registerLumpPreviewSupport(context: vscode.ExtensionContext, bin
     disposables.push(vscode.window.registerCustomEditorProvider(PreviewManager.viewType, previewManager, {
         supportsMultipleEditorsPerDocument: true,
     }));
+
+    disposables.push(vscode.window.registerCustomEditorProvider(PreviewManager.viewType + '.option', previewManager, {
+        supportsMultipleEditorsPerDocument: true,
+    }));
+
 
     disposables.push(vscode.commands.registerCommand('uzdoom.doomLump.zoomIn', () => {
         previewManager.activePreview?.zoomIn();
