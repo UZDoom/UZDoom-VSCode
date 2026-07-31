@@ -42,4 +42,5 @@ export default class DocumentFactory {
 DocumentFactory.registerDetectFunction(DoomGfxDocument);
 DocumentFactory.registerDetectFunction(DoomSndDocument);
 DocumentFactory.registerDetectFunction(PlaypalDocument);
+DocumentFactory.registerDetectFunction(DoomPngDocument);
 DocumentFactory.registerDetectFunction(DoomFlatDocument);
