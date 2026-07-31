@@ -107,7 +107,18 @@
                     }
                 ],
                 "priority": "default"
+            },
+            {
+                "viewType": "uzdoom.doomLump.previewEditor.option",
+                "displayName": "WAD Lump Viewer",
+                "selector": [
+                    {
+                        "filenamePattern": "*"
+                    }
+                ],
+                "priority": "option"
             }
+
         ],
         "languages": [
             {
@@ -133,6 +144,55 @@
                     ".wad",
                     ".iwad"
                 ]
+            },
+            {
+                "id": "doom_gfx",
+                "aliases": [
+                    "Doom GFX",
+                    "Doom Patch",
+                    "Patch",
+                    "Patch File"
+                ],
+                "icon": {
+                    "light": "./icons/gfx.svg",
+                    "dark": "./icons/gfx.svg"
+                }
+            },
+            {
+                "id": "doom_flat",
+                "aliases": [
+                    "Doom Flat",
+                    "Flat"
+                ],
+                "icon": {
+                    "light": "./icons/gfx.svg",
+                    "dark": "./icons/gfx.svg"
+                }
+            },
+            {
+                "id": "doom_snd",
+                "aliases": [
+                    "Doom SND",
+                    "Doom Sound",
+                    "Sound",
+                    "Sound File"
+                ],
+                "icon": {
+                    "light": "./icons/sound.svg",
+                    "dark": "./icons/sound.svg"
+                }
+            },
+            {
+                "id": "doom_playpal",
+                "aliases": [
+                    "Doom PlayPAL",
+                    "PlayPAL",
+                    "PlayPAL File"
+                ],
+                "icon": {
+                    "light": "./icons/palette.svg",
+                    "dark": "./icons/palette.svg"
+                }
             },
             {
                 "id": "zscript",
