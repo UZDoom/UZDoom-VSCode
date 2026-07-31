@@ -1,5 +1,5 @@
 import { MatchResult } from "../Lumps/Lump";
-import ImageDocument from "./ImageDocument";
+import { MultipleImagesImageDocument } from "./ImageDocument";
 import WadDocument from "./WadDocument";
 import { encodePng, IEncodedPng } from "@lunapaint/png-codec";
 import { DisplayContentType } from "./ContentType";
@@ -11,7 +11,14 @@ const PALETTE_SQUARE_SIZE = 16;
 const PALETTE_COLOR_DISPLAY_PIXELS = 16;
 const SINGLE_PALETTE_PIXEL_ROW_STRIDE = PALETTE_SQUARE_SIZE * PALETTE_COLOR_DISPLAY_PIXELS;
 
-export default class PlaypalDocument extends WadDocument implements ImageDocument {
+export default class PlaypalDocument extends WadDocument implements MultipleImagesImageDocument {
+    readonly multipleImages = true;
+
+    get numberOfImages(): number {
+        return this.numberOfPalettes;
+    }
+
+
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
         if (name == "PLAYPAL" && content.byteLength % 768 === 0) {
             return MatchResult.true;
@@ -101,18 +108,37 @@ export default class PlaypalDocument extends WadDocument implements ImageDocumen
         return new Uint8Array(rawRGBA.buffer);
     }
 
-    async toPNG(): Promise<ArrayBuffer> {
-        const rawRGBA = this.toRawRGBA();
+    async toPNG(rawRGBA: Uint8Array, width: number, height: number): Promise<ArrayBuffer> {
         const png: IEncodedPng = await encodePng({
-            width: this.width,
-            height: this.height,
+            width: width,
+            height: height,
             data: rawRGBA,
         });
         return new Uint8Array(png.data).buffer;
     }
 
+    getImageContentType(index: number): string {
+        return DisplayContentType.Png;
+    }
+
+    getImageWidth(index: number): number {
+        return SINGLE_PALETTE_PIXEL_ROW_STRIDE;
+    }
+
+    getImageHeight(index: number): number {
+        return SINGLE_PALETTE_PIXEL_ROW_STRIDE;
+    }
+
+    async getImage(index: number): Promise<ArrayBuffer> {
+        const rawRGBA = new Uint32Array(SINGLE_PALETTE_PIXEL_ROW_STRIDE * SINGLE_PALETTE_PIXEL_ROW_STRIDE);
+        const view = new DataView(this.data);
+        PlaypalDocument.writeOnePaletteToRawRGBA(rawRGBA, view, index);
+        const uint8Array = new Uint8Array(rawRGBA.buffer);
+        return this.toPNG(uint8Array, SINGLE_PALETTE_PIXEL_ROW_STRIDE, SINGLE_PALETTE_PIXEL_ROW_STRIDE);
+    }
+
     async getDisplayContent(): Promise<ArrayBuffer> {
-        return await this.toPNG();
+        return await this.toPNG(this.toRawRGBA(), this.width, this.height);
     }
 
     dispose(): void {

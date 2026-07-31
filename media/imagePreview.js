@@ -59,6 +59,8 @@
 	];
 
 	const settings = getSettings();
+    const multipleImages = Array.isArray(settings.src);
+    let currentImageIndex = 0;
 	const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 	// @ts-ignore
@@ -174,6 +176,60 @@
 		updateScale(zoomLevels[i] || MIN_SCALE);
 	}
 
+
+    let counter = null;
+    function nextImage() {
+        currentImageIndex = (currentImageIndex + 1) % settings.src.length;
+        image.src = settings.src[currentImageIndex];
+        updateScale(scale);
+        if (counter) {
+            counter.textContent = `${currentImageIndex + 1} / ${settings.src.length}`;
+        }
+    }
+
+    function previousImage() {
+        currentImageIndex = currentImageIndex - 1 >= 0 ? currentImageIndex - 1 : settings.src.length - 1;
+        image.src = settings.src[currentImageIndex];
+        updateScale(scale);
+        if (counter) {
+            counter.textContent = `${currentImageIndex + 1} / ${settings.src.length}`;
+        }
+    }
+
+    // if we have multiple images, we need to add next/previous buttons that float over the container to switch between images
+    if (multipleImages) {
+        const imageButtons = document.createElement('div');
+        imageButtons.classList.add('image-buttons');
+        container.appendChild(imageButtons);
+        imageButtons.addEventListener('click', () => {
+            consumeClick = true;
+        });
+
+        // we need to add a counter (e.g. 1/14) showing the current image index and the total number of images
+        counter = document.createElement('span');
+        counter.classList.add('image-counter');
+        counter.textContent = `${currentImageIndex + 1} / ${settings.src.length}`;
+        imageButtons.appendChild(counter);
+
+        const previousButton = document.createElement('button');
+        previousButton.classList.add('previous-button');
+        previousButton.addEventListener('click', () => {
+            previousImage();
+            consumeClick = true;
+        });
+        imageButtons.appendChild(previousButton);
+
+        const nextButton = document.createElement('button');
+        nextButton.classList.add('next-button');
+        nextButton.addEventListener('click', () => {
+            nextImage();
+            consumeClick = true;
+        });
+        imageButtons.appendChild(nextButton);
+
+        container.appendChild(imageButtons);
+    }
+
 	window.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
 		if (!image || !hasLoadedImage) {
 			return;
@@ -185,6 +241,14 @@
 			container.classList.remove('zoom-in');
 			container.classList.add('zoom-out');
 		}
+        if (multipleImages) {
+            // if it's left or right, switch to the next or previous image
+            if (e.key === 'ArrowLeft') {
+                previousImage();
+            } else if (e.key === 'ArrowRight') {
+                nextImage();
+            }
+        }
 	});
 
 	window.addEventListener('keyup', (/** @type {KeyboardEvent} */ e) => {
@@ -311,7 +375,11 @@
 		document.body.classList.remove('loading');
 	});
 
-	image.src = settings.src;
+    if (multipleImages) {
+        image.src = settings.src[currentImageIndex];
+    } else {
+        image.src = settings.src;
+    }
 
 	document.querySelector('.open-file-link')?.addEventListener('click', (e) => {
 		e.preventDefault();

@@ -7,6 +7,11 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { BinarySizeStatusBarEntry } from './binarySizeStatusBarEntry';
 import { Disposable } from './util/dispose';
+import WadDocument from '../doom-wad/Documents/WadDocument';
+import ImageDocument from '../doom-wad/Documents/ImageDocument';
+import { contentTypeToBase64Uri } from './util/base64';
+import { WadFileSystemProvider } from '../wad-provider/WadFileSystemProvider';
+import DocumentFactory from '../doom-wad/Documents/DocumentFactory';
 
 export function reopenAsText(resource: vscode.Uri, viewColumn: vscode.ViewColumn | undefined) {
     vscode.commands.executeCommand('vscode.openWith', resource, 'default', viewColumn);
@@ -22,14 +27,22 @@ export abstract class MediaPreview extends Disposable {
 
     protected previewState = PreviewState.Visible;
     private _binarySize: number | undefined;
+    protected cachedDocument: WadDocument | undefined;
+    protected fsProvider: WadFileSystemProvider;
 
     constructor(
         extensionRoot: vscode.Uri,
         protected readonly resource: vscode.Uri,
         protected readonly webviewEditor: vscode.WebviewPanel,
         private readonly binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
+        fsProvider: WadFileSystemProvider,
+        cachedDoc: WadDocument | undefined,
+
     ) {
         super();
+
+        this.cachedDocument = cachedDoc;
+        this.fsProvider = fsProvider;
 
         webviewEditor.webview.options = {
             enableScripts: true,
@@ -62,6 +75,8 @@ export abstract class MediaPreview extends Disposable {
                 this.webviewEditor.dispose();
             }
         }));
+
+
     }
 
     public override dispose() {
@@ -114,4 +129,52 @@ export abstract class MediaPreview extends Disposable {
 
     public copyImage() {
     }
+
+    public static async getDocument(resource: vscode.Uri, fsProvider: WadFileSystemProvider): Promise<WadDocument | undefined> {
+        if (resource.scheme === 'git') {
+            const stat = await vscode.workspace.fs.stat(resource);
+            if (stat.size === 0) {
+                return undefined;
+            }
+        }
+
+        if (resource.scheme === 'wad') {
+            const entry = await fsProvider.getEntry(resource);
+            if (entry && (entry.documentType === 'DoomGfx' || entry.documentType === 'DoomFlat')) {
+                return entry.getDisplayDocument(resource) as ImageDocument;
+            }
+        }
+
+        let content = await vscode.workspace.fs.readFile(resource);
+        let contentBuffer = new Uint8Array(content).buffer;
+        let name = Utils.basename(resource);
+        // remove the extension
+        name = name.replace(/\.[^.]+$/, '');
+        let doc = DocumentFactory.create(resource, name, contentBuffer, {});
+        return doc;
+    }
+
+
+    protected async retrieveDocument(resource: vscode.Uri): Promise<WadDocument | undefined> {
+        let document = this.cachedDocument;
+        this.cachedDocument = undefined;
+
+        if (!document) {
+            document = await MediaPreview.getDocument(resource, this.fsProvider);
+            if (!document) {
+                return undefined;
+            }
+        }
+
+        return document;
+    }
+
+    protected async getResourcePath(resource: vscode.Uri): Promise<string | undefined> {
+        let document = await this.retrieveDocument(resource);
+        if (!document) {
+            return undefined;
+        }
+        return contentTypeToBase64Uri(document.displayContentType, await document.getDisplayContent());
+    }
+
 }

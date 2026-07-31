@@ -24,6 +24,9 @@ export default class DoomGfxDocument extends WadDocument implements ImageDocumen
     get height(): number {
         return this.header.height;
     }
+
+    readonly multipleImages = false;
+
     get left(): number {
         return this.header.left;
     }

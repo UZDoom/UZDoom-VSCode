@@ -11,6 +11,7 @@ export default class DoomFlatDocument extends WadDocument implements ImageDocume
 
     readonly width = 64;
     readonly height = 64;
+    readonly multipleImages = false;
 
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
         if (content.byteLength === 4096) {

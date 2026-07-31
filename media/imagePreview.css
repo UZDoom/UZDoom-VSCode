@@ -114,3 +114,87 @@ body img {
 .vscode-high-contrast .loading-indicator {
 	background-image: url('./loading-hc.svg');
 }
+
+.image-buttons {
+	position: fixed;
+	top: 10px;
+	right: 10px;
+    /* always on top */
+	z-index: 1000;
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    cursor: default;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+}
+
+.image-buttons .image-counter {
+	font-size: 20px;
+	line-height: 1;
+	color: white;
+    margin-right: 20px;
+    margin-left: 5px;
+}
+
+.image-buttons.no-multiple-images {
+	display: none;
+}
+
+.image-buttons .next-button,
+.image-buttons .previous-button {
+	position: relative;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-radius: 5px;
+    border-color: rgba(255, 255, 255, 0.0);
+    /* strip VSCode/browser default button chrome that produces the
+       ghosted/mirrored bevel around the icon */
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    box-shadow: none !important;
+    text-shadow: none;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60% 60%;
+    cursor: pointer;
+}
+
+.image-buttons .next-button {
+    margin-left: 5px;
+    background-image: url('./next.svg');
+}
+
+.image-buttons .previous-button {
+    margin-right: 5px;
+    background-image: url('./previous.svg');
+}
+
+.image-buttons .next-button:focus,
+.image-buttons .previous-button:focus {
+    background-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 1.0);
+
+    outline: none;
+    box-shadow: none !important;
+}
+
+.image-buttons .next-button:hover,
+.image-buttons .previous-button:hover {
+    background-color: rgba(255, 255, 255, 0.75);
+    outline: none;
+    box-shadow: none !important;
+}
+
+.image-buttons .next-button:active,
+.image-buttons .previous-button:active {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 1.0);
+    outline: none;
+    box-shadow: none !important;
+}

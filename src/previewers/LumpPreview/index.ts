@@ -11,7 +11,7 @@ import { SizeStatusBarEntry } from './sizeStatusBarEntry';
 import { Scale, ZoomStatusBarEntry } from './zoomStatusBarEntry';
 import { WadFileSystemProvider } from '../../wad-provider/WadFileSystemProvider';
 import { contentTypeToBase64Uri } from '../util/base64';
-import ImageDocument from '../../doom-wad/Documents/ImageDocument';
+import ImageDocument, { MultipleImagesImageDocument } from '../../doom-wad/Documents/ImageDocument';
 import { Utils } from 'vscode-uri';
 import { WadDocument } from '../../doom-wad';
 import DocumentFactory from '../../doom-wad/Documents/DocumentFactory';
@@ -37,12 +37,12 @@ export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
 
     private async getPreviewer(realDoc: WadDocument | undefined, uri: vscode.Uri, webviewEditor: vscode.WebviewPanel): Promise<MediaPreview | undefined> {
         if (!realDoc) {
-            return new DummyPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry);
+            return new DummyPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry, this.fsProvider);
         }
         if (realDoc.displayContentType.startsWith('image/')) {
             return new ImagePreview(this.extensionRoot, uri, webviewEditor, this.sizeStatusBarEntry, this.binarySizeStatusBarEntry, this.zoomStatusBarEntry, this.fsProvider, realDoc as ImageDocument);
         } else if (realDoc.displayContentType.startsWith('audio/')) {
-            return new AudioPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry, this.fsProvider);
+            return new AudioPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry, this.fsProvider, realDoc);
         }
         return undefined;
     }
@@ -51,7 +51,7 @@ export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
         document: vscode.CustomDocument,
         webviewEditor: vscode.WebviewPanel,
     ): Promise<void> {
-        const realDoc = await PreviewManager.getDocument(document.uri, this.fsProvider);
+        const realDoc = await MediaPreview.getDocument(document.uri, this.fsProvider);
         const preview = await this.getPreviewer(realDoc, document.uri, webviewEditor);
         if (!preview) {
             throw new Error('Unsupported resource type!');
@@ -76,32 +76,11 @@ export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
         this._activePreview = value;
     }
 
-    public static async getDocument(resource: vscode.Uri, fsProvider: WadFileSystemProvider): Promise<WadDocument | undefined> {
-        if (resource.scheme === 'git') {
-            const stat = await vscode.workspace.fs.stat(resource);
-            if (stat.size === 0) {
-                return undefined;
-            }
-        }
-
-        if (resource.scheme === 'wad') {
-            const entry = await fsProvider.getEntry(resource);
-            if (entry && (entry.documentType === 'DoomGfx' || entry.documentType === 'DoomFlat')) {
-                return entry.getDisplayDocument(resource) as ImageDocument;
-            }
-        }
-
-        let content = await vscode.workspace.fs.readFile(resource);
-        let contentBuffer = new Uint8Array(content).buffer;
-        let basename = Utils.basename(resource);
-        let doc = DocumentFactory.create(resource, basename, contentBuffer, {});
-        return doc;
-    }
 }
 
 class DummyPreview extends MediaPreview {
-    constructor(extensionRoot: vscode.Uri, resource: vscode.Uri, webviewEditor: vscode.WebviewPanel, binarySizeStatusBarEntry: BinarySizeStatusBarEntry) {
-        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
+    constructor(extensionRoot: vscode.Uri, resource: vscode.Uri, webviewEditor: vscode.WebviewPanel, binarySizeStatusBarEntry: BinarySizeStatusBarEntry, fsProvider: WadFileSystemProvider) {
+        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry, fsProvider, undefined);
     }
     protected override async getWebviewContents(): Promise<string> {
         return /* html */`<!DOCTYPE html>
@@ -121,7 +100,6 @@ class ImagePreview extends MediaPreview {
 
     private _imageSize: string | undefined;
     private _imageZoom: Scale | undefined;
-    private _cachedDocument: WadDocument | undefined;
 
     private readonly emptyPngDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR42gEFAPr/AP///wAI/AL+Sr4t6gAAAABJRU5ErkJggg==';
 
@@ -132,12 +110,11 @@ class ImagePreview extends MediaPreview {
         private readonly sizeStatusBarEntry: SizeStatusBarEntry,
         binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
         private readonly zoomStatusBarEntry: ZoomStatusBarEntry,
-        private readonly fsProvider: WadFileSystemProvider,
+        fsProvider: WadFileSystemProvider,
         cachedDocument: WadDocument | undefined,
     ) {
-        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
+        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry, fsProvider, cachedDocument);
 
-        this._cachedDocument = cachedDocument;
         this._register(webviewEditor.webview.onDidReceiveMessage(message => {
             switch (message.type) {
                 case 'size': {
@@ -225,11 +202,30 @@ class ImagePreview extends MediaPreview {
         this.webviewEditor.webview.postMessage({ type: 'setActive', value: this.webviewEditor.active });
     }
 
+    private async getResourcePaths(doc: MultipleImagesImageDocument): Promise<string[]> {
+        let src: string[] = [];
+        for (let i = 0; i < doc.numberOfImages; i++) {
+            src.push(contentTypeToBase64Uri(doc.getImageContentType(i), await doc.getImage(i)));
+        }
+        return src;
+    }
+
+    protected override async getResourcePath(resource: vscode.Uri): Promise<string | undefined> {
+        return await super.getResourcePath(resource) || this.emptyPngDataUri;
+    }
+
     protected override async getWebviewContents(): Promise<string> {
-        const version = Date.now().toString();
-        const settings = {
-            src: await this.getResourcePath(this.webviewEditor, this.resource, version),
-        };
+        if (!this.cachedDocument) {
+            this.cachedDocument = await MediaPreview.getDocument(this.resource, this.fsProvider);
+        }
+        const settings = {};
+
+        if (this.cachedDocument && (this.cachedDocument as ImageDocument).multipleImages) {
+            let doc: MultipleImagesImageDocument = this.cachedDocument as MultipleImagesImageDocument;
+            settings['src'] = await this.getResourcePaths(doc);
+        } else {
+            settings['src'] = await this.getResourcePath(this.resource);
+        }
 
         const nonce = getNonce();
 
@@ -261,29 +257,6 @@ class ImagePreview extends MediaPreview {
 </html>`;
     }
 
-    private async getResourcePath(webviewEditor: vscode.WebviewPanel, resource: vscode.Uri, version: string): Promise<string> {
-        let document = this._cachedDocument;
-        this._cachedDocument = undefined;
-
-
-        if (!document && resource.scheme === 'git') {
-            const stat = await vscode.workspace.fs.stat(resource);
-            if (stat.size === 0) {
-                return this.emptyPngDataUri;
-            }
-        }
-
-        if (!document) {
-            document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
-            if (!document) {
-                throw new Error('Invalid resource');
-            }
-        }
-
-        // Avoid adding cache busting if there is already a query string
-        const base64Uri = contentTypeToBase64Uri(document.displayContentType, await document.getDisplayContent());
-        return base64Uri;
-    }
 
     private extensionResource(...parts: string[]) {
         return this.webviewEditor.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionRoot, ...parts));
@@ -292,16 +265,16 @@ class ImagePreview extends MediaPreview {
 
 
 class AudioPreview extends MediaPreview {
-    private _cachedDocument: WadDocument | undefined;
 
     constructor(
         private readonly extensionRoot: vscode.Uri,
         resource: vscode.Uri,
         webviewEditor: vscode.WebviewPanel,
         binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
-        private readonly fsProvider: WadFileSystemProvider,
+        fsProvider: WadFileSystemProvider,
+        cachedDocument: WadDocument | undefined,
     ) {
-        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
+        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry, fsProvider, cachedDocument);
 
         this._register(webviewEditor.webview.onDidReceiveMessage(message => {
             switch (message.type) {
@@ -318,9 +291,8 @@ class AudioPreview extends MediaPreview {
     }
 
     protected async getWebviewContents(): Promise<string> {
-        const version = Date.now().toString();
         const settings = {
-            src: await this.getResourcePath(this.webviewEditor, this.resource, version),
+            src: await this.getResourcePath(this.resource),
         };
 
         const nonce = getNonce();
@@ -350,29 +322,6 @@ class AudioPreview extends MediaPreview {
 	<script src="${escapeAttribute(this.extensionResource('media', 'audioPreview.js'))}" nonce="${nonce}"></script>
 </body>
 </html>`;
-    }
-
-    private async getResourcePath(webviewEditor: vscode.WebviewPanel, resource: vscode.Uri, version: string): Promise<string | null> {
-        let document = this._cachedDocument;
-        this._cachedDocument = undefined;
-
-
-        if (!document && resource.scheme === 'git') {
-            const stat = await vscode.workspace.fs.stat(resource);
-            if (stat.size === 0) {
-                return null;
-            }
-        }
-        if (!document) {
-            document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
-            if (!document) {
-                throw new Error('Invalid resource');
-            }
-        }
-
-        // Avoid adding cache busting if there is already a query string
-        const base64Uri = contentTypeToBase64Uri(document.displayContentType, await document.getDisplayContent());
-        return base64Uri;
     }
 
     private extensionResource(...parts: string[]) {
