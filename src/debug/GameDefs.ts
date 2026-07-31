@@ -85,7 +85,7 @@ export function searchForGameBinary(): string | null {
 
 export function getLaunchCommand(
     gamePath: string,
-    iwad: string,
+    iwad: string | undefined,
     pwads: string[],
     debugPort: number,
     map?: string,
@@ -94,11 +94,12 @@ export function getLaunchCommand(
     cwd?: string,
 ): LaunchCommand {
     let args = [
-        '-iwad',
-        iwad,
         '-debug',
         debugPort.toString(),
     ];
+    if (iwad) {
+        args.push('-iwad', iwad);
+    }
     for (const pwad of pwads) {
         args.push('-file', pwad);
     }
