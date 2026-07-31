@@ -467,6 +467,7 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
             }
         });
     }
+
     findSourceItemByPathAndOrigin(path: string, origin: string): SourceItem | undefined {
         for (let item of this.sourcePaths.values()) {
             if (item.path.toLowerCase().endsWith(path.toLowerCase()) && item.origin.archive == origin) {
@@ -475,6 +476,7 @@ export class GameDebugAdapterProxy extends DebugAdapterProxy {
         }
         return undefined;
     }
+
     protected handleLoadedSourcesRequest(request: DAP.LoadedSourcesRequest) {
         this.sendRequestToServerWithCB(request, DEFAULT_TIMEOUT, (r, req) => {
             const response = r as DAP.LoadedSourcesResponse;

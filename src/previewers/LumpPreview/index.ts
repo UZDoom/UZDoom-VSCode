@@ -273,9 +273,11 @@ class ImagePreview extends MediaPreview {
             }
         }
 
-        document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
         if (!document) {
-            throw new Error('Invalid resource');
+            document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
+            if (!document) {
+                throw new Error('Invalid resource');
+            }
         }
 
         // Avoid adding cache busting if there is already a query string
@@ -361,10 +363,11 @@ class AudioPreview extends MediaPreview {
                 return null;
             }
         }
-
-        document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
         if (!document) {
-            throw new Error('Invalid resource');
+            document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
+            if (!document) {
+                throw new Error('Invalid resource');
+            }
         }
 
         // Avoid adding cache busting if there is already a query string

@@ -3,6 +3,7 @@ import DoomFlatDocument from "./DoomFlat";
 import DoomSndDocument from "./DoomSnd";
 import { MatchResult } from "../Lumps/Lump";
 import WadDocument from "./WadDocument";
+import PlaypalDocument from "./Playpal";
 
 export default class DocumentFactory {
 
@@ -40,4 +41,5 @@ export default class DocumentFactory {
 
 DocumentFactory.registerDetectFunction(DoomGfxDocument);
 DocumentFactory.registerDetectFunction(DoomSndDocument);
+DocumentFactory.registerDetectFunction(PlaypalDocument);
 DocumentFactory.registerDetectFunction(DoomFlatDocument);

@@ -103,7 +103,7 @@
                         "filenamePattern": "*.lmp"
                     },
                     {
-                        "filenamePattern": "*.snd"
+                        "filenamePattern": "PLAYPAL"
                     }
                 ],
                 "priority": "default"
@@ -147,6 +147,10 @@
                     ".zsc",
                     ".zc"
                 ],
+                "icon": {
+                    "light": "./icons/UZDoom-ZScript.svg",
+                    "dark": "./icons/UZDoom-ZScript.svg"
+                },
                 "configuration": "./configurations/ZScriptConfiguration.json"
             },
             {
