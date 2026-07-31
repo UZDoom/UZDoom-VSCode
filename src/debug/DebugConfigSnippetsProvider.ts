@@ -1,7 +1,6 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { DEFAULT_PORT } from './GameDefs';
 import { GameConfigurationProvider } from './GameDebugConfigProvider';
 
 const LAUNCH_JSON_PATH = '.vscode/launch.json';

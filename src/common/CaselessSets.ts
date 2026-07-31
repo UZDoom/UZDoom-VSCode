@@ -45,7 +45,7 @@ export class CustomSet<T> implements Set<T> {
         this.items = [];
     }
 
-    [Symbol.iterator](): SetIterator<T> {
+    [Symbol.iterator](): IterableIterator<T> {
         return this.items[Symbol.iterator]();
     }
 
@@ -55,16 +55,16 @@ export class CustomSet<T> implements Set<T> {
         this.items.forEach(item => callbackfn.call(thisArg, item, item, this));
     }
 
-    entries(): SetIterator<[T, T]> {
-        return this.items.entries() as SetIterator<[T, T]>;
+    entries(): IterableIterator<[T, T]> {
+        return this.items.entries() as unknown as IterableIterator<[T, T]>;
     }
 
-    keys(): SetIterator<T> {
-        return this.items.keys() as SetIterator<T>;
+    keys(): IterableIterator<T> {
+        return this.items.keys() as unknown as IterableIterator<T>;
     }
 
-    values(): SetIterator<T> {
-        return this.items.values() as SetIterator<T>;
+    values(): IterableIterator<T> {
+        return this.items.values();
     }
 }
 

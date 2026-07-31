@@ -5,7 +5,7 @@
 		"outDir": "out",
 		"lib": [
 			"WebWorker",
-			"ES2020"
+			"ES2020",
 		],
 		"esModuleInterop": true,
 		"sourceMap": true,
@@ -23,9 +23,11 @@
 		"inlineSourceMap": false,
 		"preserveConstEnums": true,
 		"strictNullChecks": true,
-		"noUnusedParameters": false
+		"noUnusedParameters": false,
+		"skipLibCheck": true
 	},
 	"exclude": [
-		"node_modules"
+		"node_modules",
+        "tests"
 	]
 }

@@ -352,14 +352,14 @@ export class DebugLauncherService implements IDebugLauncherService {
             if (_processHasExited()) {
                 return true;
             }
-            if (cancellationToken.isCancellationRequested) {
+            if (cancellationToken!.isCancellationRequested) {
                 return true;
             }
             return false;
         };
         const _handleBad = async () => {
             this.removeProcessListeners();
-            if (cancellationToken.isCancellationRequested) {
+            if (cancellationToken!.isCancellationRequested) {
                 await this.tearDownAfterDebug();
                 this._errorString = '';
                 return DebugLaunchState.cancelled;
@@ -413,7 +413,7 @@ export class DebugLauncherService implements IDebugLauncherService {
         let result = false;
         let outputCheckFailed = false;
         result = await this.waitForPort(port, connectionTimeout, async () => {
-            if (cancellationToken.isCancellationRequested) {
+            if (cancellationToken!.isCancellationRequested) {
                 return false;
             }
             gameIsRunning = (await findProcess('pid', this._gamePID!, false)).length > 0;

@@ -10,21 +10,26 @@ export class Window {
   public path: string
 
   constructor(id: number) {
-    if (!addon) return
 
     this.id = id
+    this.processId = 0
+    this.path = ''
+
+    if (!addon) return
+
     const { processId, path } = addon.initWindow(id)
     this.processId = processId
     this.path = path
   }
 
   getBounds(): IRectangle {
-    if (!addon) return
+    if (!addon) return { x: 0, y: 0, width: 0, height: 0 }
 
     const bounds = addon.getWindowBounds(this.id)
 
     if (process.platform === "win32") {
       const sf = this.getMonitor().getScaleFactor()
+      if (sf === null) return bounds
 
       bounds.x = Math.floor(bounds.x / sf)
       bounds.y = Math.floor(bounds.y / sf)
@@ -38,10 +43,12 @@ export class Window {
   setBounds(bounds: IRectangle) {
     if (!addon) return
 
-    const newBounds = { ...this.getBounds(), ...bounds }
+    const newBounds: IRectangle = { ...this.getBounds(), ...bounds }
+    if (newBounds.x === undefined || newBounds.y === undefined || newBounds.width === undefined || newBounds.height === undefined) return
 
     if (process.platform === "win32") {
       const sf = this.getMonitor().getScaleFactor()
+      if (sf === null) return
 
       newBounds.x = Math.floor(newBounds.x * sf)
       newBounds.y = Math.floor(newBounds.y * sf)
@@ -55,12 +62,12 @@ export class Window {
   }
 
   getTitle(): string {
-    if (!addon) return
+    if (!addon) return ''
     return addon.getWindowTitle(this.id)
   }
 
   getName(): string {
-    if (!addon) return
+    if (!addon) return ''
     return addon.getWindowName(this.id);
   }
 
@@ -125,13 +132,14 @@ export class Window {
   }
 
   isWindow(): boolean {
-    if (!addon) return
+    if (!addon) return false
 
     if (process.platform === "win32") {
-      return this.path && this.path !== "" && addon.isWindow(this.id)
+      return !!this.path && this.path !== "" && addon.isWindow(this.id)
     } else if (process.platform === "darwin") {
-      return this.path && this.path !== "" && !!addon.initWindow(this.id)
+      return !!this.path && this.path !== "" && !!addon.initWindow(this.id)
     }
+    return true
   }
 
   isVisible(): boolean {
