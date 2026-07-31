@@ -24,6 +24,7 @@ export default class DoomPngDocument extends WadDocument implements ImageDocumen
 
     static isThisFormat(name: string, content: ArrayBuffer): MatchResult {
         // check the first 4 bytes for the PNG header
+        if (content.byteLength < 8) return MatchResult.false;
         const view = new DataView(content);
         if (view.getUint32(0, false) !== 0x89504E47) return MatchResult.false;
         if (view.getUint32(4, false) !== 0x0D0A1A0A) return MatchResult.false;
