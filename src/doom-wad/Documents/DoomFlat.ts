@@ -39,7 +39,7 @@ export default class DoomFlatDocument extends WadDocument implements ImageDocume
     }
 
     static getDocumentType(): string {
-        return "DoomFlat";
+        return "doom_flat";
     }
 
     private toRawRGBA(): Uint8Array {

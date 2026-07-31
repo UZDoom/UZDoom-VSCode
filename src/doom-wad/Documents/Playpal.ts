@@ -60,7 +60,7 @@ export default class PlaypalDocument extends WadDocument implements MultipleImag
     }
 
     static getDocumentType(): string {
-        return "DoomPlayPal";
+        return "doom_playpal";
     }
 
     private static getRGBA32Color(view: DataView, index: number, paletteNum: number): number {

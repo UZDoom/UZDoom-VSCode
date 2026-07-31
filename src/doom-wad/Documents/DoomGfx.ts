@@ -35,7 +35,7 @@ export default class DoomGfxDocument extends WadDocument implements ImageDocumen
     }
 
     static getDocumentType(): string {
-        return "DoomGfx";
+        return "doom_gfx";
     }
 
     static getDisplayContentType(): DisplayContentType {

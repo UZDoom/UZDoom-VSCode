@@ -21,7 +21,7 @@ export default class PlayPal extends Lump {
     }
 
     get documentType(): string {
-        return "DoomPlaypal";
+        return PlaypalDocument.getDocumentType();
     }
 
     getDisplayDocument(uri) {

@@ -18,6 +18,10 @@ export default class WadDocument {
         return DisplayContentType.Unknown;
     }
 
+    static getDocumentType(): string {
+        return "";
+    }
+
     constructor(uri: any, data: ArrayBuffer, extra: any) {
         this.uri = uri;
         this.data = data;

@@ -49,8 +49,9 @@ export default class DoomSndDocument extends WadDocument {
 
         return header;
     }
+
     static getDocumentType(): string {
-        return "DoomSnd";
+        return "doom_snd";
     }
 
     async getDisplayContent(): Promise<ArrayBuffer> {
