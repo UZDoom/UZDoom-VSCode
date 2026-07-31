@@ -10,21 +10,18 @@ import { escapeAttribute, getNonce } from '../util/dom';
 import { SizeStatusBarEntry } from './sizeStatusBarEntry';
 import { Scale, ZoomStatusBarEntry } from './zoomStatusBarEntry';
 import { WadFileSystemProvider } from '../../wad-provider/WadFileSystemProvider';
-import { pngToBase64Uri } from '../util/base64';
+import { contentTypeToBase64Uri } from '../util/base64';
 import ImageDocument from '../../doom-wad/Documents/ImageDocument';
 import { Utils } from 'vscode-uri';
-import { DoomGfxDocument, DoomGfxLump, PlayPal } from '../../doom-wad';
-import { LoadMode, MatchResult } from '../../doom-wad/Lumps/Lump';
-import DoomFlatLump from '../../doom-wad/Lumps/DoomFlat';
-import DoomFlatDocument from '../../doom-wad/Documents/DoomFlat';
-
+import { WadDocument } from '../../doom-wad';
+import DocumentFactory from '../../doom-wad/Documents/DocumentFactory';
 
 export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
 
-    public static readonly viewType = 'uzdoom.doomImage.previewEditor';
+    public static readonly viewType = 'uzdoom.doomLump.previewEditor';
 
-    private readonly _previews = new Set<ImagePreview>();
-    private _activePreview: ImagePreview | undefined;
+    private readonly _previews = new Set<MediaPreview>();
+    private _activePreview: MediaPreview | undefined;
 
     constructor(
         private readonly extensionRoot: vscode.Uri,
@@ -38,11 +35,27 @@ export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
         return { uri, dispose: () => { } };
     }
 
+    private async getPreviewer(realDoc: WadDocument | undefined, uri: vscode.Uri, webviewEditor: vscode.WebviewPanel): Promise<MediaPreview | undefined> {
+        if (!realDoc) {
+            return new DummyPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry);
+        }
+        if (realDoc.displayContentType.startsWith('image/')) {
+            return new ImagePreview(this.extensionRoot, uri, webviewEditor, this.sizeStatusBarEntry, this.binarySizeStatusBarEntry, this.zoomStatusBarEntry, this.fsProvider, realDoc as ImageDocument);
+        } else if (realDoc.displayContentType.startsWith('audio/')) {
+            return new AudioPreview(this.extensionRoot, uri, webviewEditor, this.binarySizeStatusBarEntry, this.fsProvider);
+        }
+        return undefined;
+    }
+
     public async resolveCustomEditor(
         document: vscode.CustomDocument,
         webviewEditor: vscode.WebviewPanel,
     ): Promise<void> {
-        const preview = new ImagePreview(this.extensionRoot, document.uri, webviewEditor, this.sizeStatusBarEntry, this.binarySizeStatusBarEntry, this.zoomStatusBarEntry, this.fsProvider);
+        const realDoc = await PreviewManager.getDocument(document.uri, this.fsProvider);
+        const preview = await this.getPreviewer(realDoc, document.uri, webviewEditor);
+        if (!preview) {
+            throw new Error('Unsupported resource type!');
+        }
         this._previews.add(preview);
         this.setActivePreview(preview);
 
@@ -59,16 +72,56 @@ export class PreviewManager implements vscode.CustomReadonlyEditorProvider {
 
     public get activePreview() { return this._activePreview; }
 
-    private setActivePreview(value: ImagePreview | undefined): void {
+    private setActivePreview(value: MediaPreview | undefined): void {
         this._activePreview = value;
+    }
+
+    public static async getDocument(resource: vscode.Uri, fsProvider: WadFileSystemProvider): Promise<WadDocument | undefined> {
+        if (resource.scheme === 'git') {
+            const stat = await vscode.workspace.fs.stat(resource);
+            if (stat.size === 0) {
+                return undefined;
+            }
+        }
+
+        if (resource.scheme === 'wad') {
+            const entry = await fsProvider.getEntry(resource);
+            if (entry && (entry.documentType === 'DoomGfx' || entry.documentType === 'DoomFlat')) {
+                return entry.getDisplayDocument(resource) as ImageDocument;
+            }
+        }
+
+        let content = await vscode.workspace.fs.readFile(resource);
+        let contentBuffer = new Uint8Array(content).buffer;
+        let basename = Utils.basename(resource);
+        let doc = DocumentFactory.create(resource, basename, contentBuffer, {});
+        return doc;
     }
 }
 
+class DummyPreview extends MediaPreview {
+    constructor(extensionRoot: vscode.Uri, resource: vscode.Uri, webviewEditor: vscode.WebviewPanel, binarySizeStatusBarEntry: BinarySizeStatusBarEntry) {
+        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
+    }
+    protected override async getWebviewContents(): Promise<string> {
+        return /* html */`<!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Dummy Preview</title>
+                </head>
+                <body>
+                    <p>Could not preview this file.</p>
+                </body>
+                </html>`;
+    }
+}
 
 class ImagePreview extends MediaPreview {
 
     private _imageSize: string | undefined;
     private _imageZoom: Scale | undefined;
+    private _cachedDocument: WadDocument | undefined;
 
     private readonly emptyPngDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR42gEFAPr/AP///wAI/AL+Sr4t6gAAAABJRU5ErkJggg==';
 
@@ -80,9 +133,11 @@ class ImagePreview extends MediaPreview {
         binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
         private readonly zoomStatusBarEntry: ZoomStatusBarEntry,
         private readonly fsProvider: WadFileSystemProvider,
+        cachedDocument: WadDocument | undefined,
     ) {
         super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
 
+        this._cachedDocument = cachedDocument;
         this._register(webviewEditor.webview.onDidReceiveMessage(message => {
             switch (message.type) {
                 case 'size': {
@@ -131,19 +186,19 @@ class ImagePreview extends MediaPreview {
         this.zoomStatusBarEntry.hide(this);
     }
 
-    public zoomIn() {
+    public override zoomIn() {
         if (this.previewState === PreviewState.Active) {
             this.webviewEditor.webview.postMessage({ type: 'zoomIn' });
         }
     }
 
-    public zoomOut() {
+    public override zoomOut() {
         if (this.previewState === PreviewState.Active) {
             this.webviewEditor.webview.postMessage({ type: 'zoomOut' });
         }
     }
 
-    public copyImage() {
+    public override copyImage() {
         if (this.previewState === PreviewState.Active) {
             this.webviewEditor.reveal();
             this.webviewEditor.webview.postMessage({ type: 'copyImage' });
@@ -207,40 +262,25 @@ class ImagePreview extends MediaPreview {
     }
 
     private async getResourcePath(webviewEditor: vscode.WebviewPanel, resource: vscode.Uri, version: string): Promise<string> {
-        let document: ImageDocument | undefined;
-        if (resource.scheme === 'wad') {
-            const entry = await this.fsProvider.getEntry(resource);
-            if (entry && (entry.documentType === 'DoomGfx' || entry.documentType === 'DoomFlat')) {
-                document = entry.getDisplayDocument(resource) as ImageDocument;
-            }
-            if (!document) {
-                throw new Error('Invalid resource');
-            }
-        }
+        let document = this._cachedDocument;
+        this._cachedDocument = undefined;
 
-        if (resource.scheme === 'git') {
+
+        if (!document && resource.scheme === 'git') {
             const stat = await vscode.workspace.fs.stat(resource);
             if (stat.size === 0) {
                 return this.emptyPngDataUri;
             }
         }
+
+        document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
         if (!document) {
-            let content = await vscode.workspace.fs.readFile(resource);
-            let contentBuffer = new Uint8Array(content).buffer;
-            let basename = Utils.basename(resource);
-            if (DoomGfxLump.isThisFormat(basename, contentBuffer, LoadMode.normal) === MatchResult.true) {
-                document = new DoomGfxDocument(resource, contentBuffer, { PLAYPAL: PlayPal.DefaultPlayPal });
-            } else if (DoomFlatLump.isThisFormat(basename, contentBuffer, LoadMode.flats) === MatchResult.true) {
-                document = new DoomFlatDocument(resource, contentBuffer, { PLAYPAL: PlayPal.DefaultPlayPal });
-            } else {
-                throw new Error('Invalid resource');
-            }
+            throw new Error('Invalid resource');
         }
 
         // Avoid adding cache busting if there is already a query string
-        const base64Uri = pngToBase64Uri(await document.getDisplayContent());
+        const base64Uri = contentTypeToBase64Uri(document.displayContentType, await document.getDisplayContent());
         return base64Uri;
-        // return webviewEditor.webview.asWebviewUri(vscode.Uri.parse(base64Uri)).with({ query: `version=${version}` }).toString();
     }
 
     private extensionResource(...parts: string[]) {
@@ -249,7 +289,95 @@ class ImagePreview extends MediaPreview {
 }
 
 
-export function registerImagePreviewSupport(context: vscode.ExtensionContext, binarySizeStatusBarEntry: BinarySizeStatusBarEntry, fsProvider: WadFileSystemProvider): vscode.Disposable {
+class AudioPreview extends MediaPreview {
+    private _cachedDocument: WadDocument | undefined;
+
+    constructor(
+        private readonly extensionRoot: vscode.Uri,
+        resource: vscode.Uri,
+        webviewEditor: vscode.WebviewPanel,
+        binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
+        private readonly fsProvider: WadFileSystemProvider,
+    ) {
+        super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
+
+        this._register(webviewEditor.webview.onDidReceiveMessage(message => {
+            switch (message.type) {
+                case 'reopen-as-text': {
+                    reopenAsText(resource, webviewEditor.viewColumn);
+                    break;
+                }
+            }
+        }));
+
+        this.updateBinarySize();
+        this.render();
+        this.updateState();
+    }
+
+    protected async getWebviewContents(): Promise<string> {
+        const version = Date.now().toString();
+        const settings = {
+            src: await this.getResourcePath(this.webviewEditor, this.resource, version),
+        };
+
+        const nonce = getNonce();
+
+        const cspSource = this.webviewEditor.webview.cspSource;
+        return /* html */`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<!-- Disable pinch zooming -->
+	<meta name="viewport"
+		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+
+	<title>Audio Preview</title>
+
+	<link rel="stylesheet" href="${escapeAttribute(this.extensionResource('media', 'audioPreview.css'))}" type="text/css" media="screen" nonce="${nonce}">
+
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: ${cspSource}; media-src data: blob: ${cspSource}; script-src 'nonce-${nonce}'; style-src ${cspSource} 'nonce-${nonce}';">
+	<meta id="settings" data-settings="${escapeAttribute(JSON.stringify(settings))}">
+</head>
+<body class="container loading" data-vscode-context='{ "preventDefaultContextMenuItems": true }'>
+	<div class="loading-indicator"></div>
+	<div class="loading-error">
+		<p>${vscode.l10n.t("An error occurred while loading the audio file.")}</p>
+		<a href="#" class="open-file-link">${vscode.l10n.t("Open file using VS Code's standard text/binary editor?")}</a>
+	</div>
+	<script src="${escapeAttribute(this.extensionResource('media', 'audioPreview.js'))}" nonce="${nonce}"></script>
+</body>
+</html>`;
+    }
+
+    private async getResourcePath(webviewEditor: vscode.WebviewPanel, resource: vscode.Uri, version: string): Promise<string | null> {
+        let document = this._cachedDocument;
+        this._cachedDocument = undefined;
+
+
+        if (!document && resource.scheme === 'git') {
+            const stat = await vscode.workspace.fs.stat(resource);
+            if (stat.size === 0) {
+                return null;
+            }
+        }
+
+        document = await PreviewManager.getDocument(resource, this.fsProvider) as ImageDocument;
+        if (!document) {
+            throw new Error('Invalid resource');
+        }
+
+        // Avoid adding cache busting if there is already a query string
+        const base64Uri = contentTypeToBase64Uri(document.displayContentType, await document.getDisplayContent());
+        return base64Uri;
+    }
+
+    private extensionResource(...parts: string[]) {
+        return this.webviewEditor.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionRoot, ...parts));
+    }
+}
+
+export function registerLumpPreviewSupport(context: vscode.ExtensionContext, binarySizeStatusBarEntry: BinarySizeStatusBarEntry, fsProvider: WadFileSystemProvider): vscode.Disposable {
     const disposables: vscode.Disposable[] = [];
 
     const sizeStatusBarEntry = new SizeStatusBarEntry();
@@ -264,15 +392,15 @@ export function registerImagePreviewSupport(context: vscode.ExtensionContext, bi
         supportsMultipleEditorsPerDocument: true,
     }));
 
-    disposables.push(vscode.commands.registerCommand('uzdoom.doomImage.zoomIn', () => {
+    disposables.push(vscode.commands.registerCommand('uzdoom.doomLump.zoomIn', () => {
         previewManager.activePreview?.zoomIn();
     }));
 
-    disposables.push(vscode.commands.registerCommand('uzdoom.doomImage.zoomOut', () => {
+    disposables.push(vscode.commands.registerCommand('uzdoom.doomLump.zoomOut', () => {
         previewManager.activePreview?.zoomOut();
     }));
 
-    disposables.push(vscode.commands.registerCommand('uzdoom.doomImage.copyImage', () => {
+    disposables.push(vscode.commands.registerCommand('uzdoom.doomLump.copyImage', () => {
         previewManager.activePreview?.copyImage();
     }));
 

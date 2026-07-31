@@ -5,7 +5,6 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import Lump, { LoadMode } from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
-import { DoomGfxDocument, DoomFlatDocument, DoomSndDocument } from "../doom-wad";
 import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
 import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
 /**
@@ -33,16 +32,13 @@ export class WadFileSystemProvider implements FileSystemProvider {
     }
 
     private async registerDefaultEditors(wad: Wad, wadPath: string) {
-        let imageLumpUris: Uri[] = [];
-        let soundLumpUris: Uri[] = [];
+        let lumpUris: Uri[] = [];
         for (const lump of wad.lumps) {
-            if (lump.documentType === DoomGfxDocument.getDocumentType() || lump.documentType === DoomFlatDocument.getDocumentType()) {
-                imageLumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
-            } else if (lump.documentType === DoomSndDocument.getDocumentType()) {
-                soundLumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
+            if (lump.documentType !== "") {
+                lumpUris.push(WadFileSystemProvider.CreateWadUri(wadPath, lump.name));
             }
         }
-        if (imageLumpUris.length > 0 || soundLumpUris.length > 0) {
+        if (lumpUris.length > 0) {
             const SECTION = 'workbench';
             const KEY = 'editorAssociations';
             let config = vscode.workspace.getConfiguration(SECTION);
@@ -61,11 +57,8 @@ export class WadFileSystemProvider implements FileSystemProvider {
                     }
                 }
             }
-            for (const uri of imageLumpUris) {
-                value[uri.toString()] = 'uzdoom.doomImage.previewEditor';
-            }
-            for (const uri of soundLumpUris) {
-                value[uri.toString()] = 'uzdoom.doomSnd.previewEditor';
+            for (const uri of lumpUris) {
+                value[uri.toString()] = 'uzdoom.doomLump.previewEditor';
             }
             config.update(KEY, value, vscode.ConfigurationTarget.Workspace);
         }

@@ -96,19 +96,12 @@
     "contributes": {
         "customEditors": [
             {
-                "viewType": "uzdoom.doomImage.previewEditor",
-                "displayName": "WAD Image Viewer",
+                "viewType": "uzdoom.doomLump.previewEditor",
+                "displayName": "WAD Lump Viewer",
                 "selector": [
                     {
                         "filenamePattern": "*.lmp"
-                    }
-                ],
-                "priority": "default"
-            },
-            {
-                "viewType": "uzdoom.doomSnd.previewEditor",
-                "displayName": "WAD Sound Viewer",
-                "selector": [
+                    },
                     {
                         "filenamePattern": "*.snd"
                     }

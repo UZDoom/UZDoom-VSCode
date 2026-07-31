@@ -104,4 +104,14 @@ export abstract class MediaPreview extends Disposable {
             this.previewState = PreviewState.Visible;
         }
     }
+
+
+    public zoomIn() {
+    }
+
+    public zoomOut() {
+    }
+
+    public copyImage() {
+    }
 }

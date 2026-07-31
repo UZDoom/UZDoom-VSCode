@@ -10,7 +10,7 @@ import { PreviewStatusBarEntry } from '../ownedStatusBarEntry';
 export class SizeStatusBarEntry extends PreviewStatusBarEntry {
 
     constructor() {
-        super('status.uzdoom.doomImage.size', vscode.l10n.t("Image Size"), vscode.StatusBarAlignment.Right, 101 /* to the left of editor status (100) */);
+        super('status.uzdoom.doomLump.size', vscode.l10n.t("Image Size"), vscode.StatusBarAlignment.Right, 101 /* to the left of editor status (100) */);
     }
 
     public show(owner: unknown, text: string) {

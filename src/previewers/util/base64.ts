@@ -15,6 +15,10 @@ export function cssToBase64Uri(css: string): string {
     return `data:text/css;base64,${toBase64(css)}`;
 }
 
+export function contentTypeToBase64Uri(contentType: string, content: ArrayBuffer): string {
+    return `data:${contentType};base64,${toBase64(content)}`;
+}
+
 export function pngToBase64Uri(png: ArrayBuffer): string {
     return `data:image/png;base64,${toBase64(png)}`;
 }
