@@ -4,15 +4,13 @@ import findProcess from 'find-process';
 import { lsof, ProcessInfo } from 'list-open-files';
 import path from 'path';
 import { CancellationToken, DummyCancellationToken } from './IDEInterface';
-import { GameVersion, GameVersionChecker } from '../debug/GameVersionChecker';
 
 export enum DebugLaunchState {
     success,
     launcherError,
     gameFailedToStart,
     gameExitedBeforeOpening,
-    gameVersionNotDetected,
-    gameVersionNotSupported,
+    outputCheckFailed,
     multipleGamesRunning,
     cancelled,
 }
@@ -21,6 +19,7 @@ export interface IDebugLauncherService {
     runLauncher(
         launcherCommand: LaunchCommand,
         portToCheck: number,
+        options?: LauncherOptions,
         cancellationToken?: CancellationToken
     ): Promise<DebugLaunchState>;
     getLaunchCommandFromRunningProcess(port: number, game_name: string): Promise<LaunchCommand | undefined>;
@@ -31,12 +30,18 @@ export interface LaunchCommand {
     args: string[];
     cwd?: string;
 }
+
+export interface LauncherOptions {
+    detectForkAndDetach?: boolean;
+    // if this returns false, the launch will be cancelled and the error string will be set
+    outputCheckCallback?: (output: string) => boolean | Promise<boolean>;
+}
+
 export class DebugLauncherService implements IDebugLauncherService {
 
     // TODO: Move this stuff into the global Context
     private cancellationToken: CancellationToken | undefined;
     public launcherProcess: ChildProcess | undefined;
-    public gameVersion: GameVersion | undefined;
     private _gamePID: number | undefined;
     private gameName: string = '';
     // @ts-ignore
@@ -53,7 +58,6 @@ export class DebugLauncherService implements IDebugLauncherService {
     constructor() {
     }
     public reset() {
-        this.gameVersion = undefined;
         this.launcherProcess = undefined;
         this._gamePID = undefined;
         this.gameName = "";
@@ -286,7 +290,8 @@ export class DebugLauncherService implements IDebugLauncherService {
     async runLauncher(
         launcherCommand: LaunchCommand,
         portToCheck: number,
-        cancellationToken: CancellationToken | undefined
+        options: LauncherOptions = {},
+        cancellationToken: CancellationToken | undefined = undefined
     ): Promise<DebugLaunchState> {
         await this.tearDownAfterDebug();
         if (!cancellationToken) {
@@ -306,6 +311,7 @@ export class DebugLauncherService implements IDebugLauncherService {
         let _stdErr: string = '';
         this.launcherProcess = spawn(cmd, args, {
             cwd: launcherCommand.cwd,
+            stdio: 'pipe',
         });
         let gameIsRunning = true;
         let errorOccured = false;
@@ -380,54 +386,52 @@ export class DebugLauncherService implements IDebugLauncherService {
         if (_checkBad()) {
             return await _handleBad();
         }
-        const GameStartTimeout = 15000;
-        // get the current system time
-        gameIsRunning = await this.waitForGameToStart(GameStartTimeout, () => {
-            return !_checkBad();
-        });
-        if (!gameIsRunning || _checkBad()) {
-            return await _handleBad();
+        
+        if (options.detectForkAndDetach){
+            const GameStartTimeout = 15000;
+            // get the current system time
+            gameIsRunning = await this.waitForGameToStart(GameStartTimeout, () => {
+                return !_checkBad();
+            });
+            if (!gameIsRunning || _checkBad()) {
+                return await _handleBad();
+            }
+            const gamePIDs = await this.getGamePIDs(this.gameName);
+            if (gamePIDs.length === 0) {
+                return await _handleBad();
+            }
+            if (gamePIDs.length > 1) {
+                return DebugLaunchState.multipleGamesRunning;
+            }
+            this._gamePID = gamePIDs[0];
+        } else {
+            gameIsRunning = true;
+            this._gamePID = this.launcherProcess.pid;
         }
-        // we can't get the PID of the game from the launcher process because
-        // both MO2 and the script extender loaders fork and deatch the game process
-        const gamePIDs = await this.getGamePIDs(this.gameName);
-        if (gamePIDs.length === 0) {
-            return await _handleBad();
-        }
-        if (gamePIDs.length > 1) {
-            return DebugLaunchState.multipleGamesRunning;
-        }
-        this._gamePID = gamePIDs[0];
-
-        // wait until we have at least one line of output
-        if (!(await this.waitFor(() => this.CountInString(_stdOut, '\n') > 0, 100, 15000, () => !_checkBad()))) {
-            return await _handleBad();
-        }
-        this.gameVersion = GameVersionChecker.getGameVersionFromOutput(_stdOut);
-        if (!this.gameVersion) {
-            await this.tearDownAfterDebug();
-            this._errorString = `Could not determine ${this.gameName} version.`;
-            return DebugLaunchState.gameVersionNotDetected;
-        }
-        if (!GameVersionChecker.versionSupportsDebugger(this.gameVersion)) {
-            await this.tearDownAfterDebug();
-            this._errorString = `${this.gameName} version ${GameVersionChecker.toString(this.gameVersion)} does not support debugging. Please grab the latest nightly build from https://devbuilds.drdteam.org/uzdoom/.`;
-            return DebugLaunchState.gameVersionNotSupported;
-        }
-
         // game has launched, now we wait for the port to open
         const connectionTimeout = 15000;
         let result = false;
+        let outputCheckFailed = false;
         result = await this.waitForPort(port, connectionTimeout, async () => {
             if (cancellationToken.isCancellationRequested) {
                 return false;
             }
-            gameIsRunning = await this.getGameIsRunning(this.gameName);
-            return gameIsRunning;
+            gameIsRunning = (await findProcess('pid', this._gamePID!, false)).length > 0;
+            if (!gameIsRunning) {
+                return false;
+            }
+            if (options.outputCheckCallback) {
+                return await options.outputCheckCallback(_stdOut);
+            }
+            return true;
         });
-        if (!gameIsRunning || _checkBad()) {
-            return await _handleBad();
+        if (!result || !gameIsRunning || _checkBad()) {
+            let returnState = await _handleBad();
+            if (outputCheckFailed) {
+                returnState = DebugLaunchState.outputCheckFailed;
+            }
+            return returnState;
         }
-        return result ? DebugLaunchState.success : DebugLaunchState.gameFailedToStart;
+        return DebugLaunchState.success;
     }
 }

@@ -8,7 +8,7 @@ import { DebugLauncherService, DebugLaunchState, LaunchCommand } from '../adapte
 import { DEFAULT_PORT, isBuiltinPK3File, ProjectItem, GAME_NAME, getLaunchCommand as getGameLaunchCommand } from './GameDefs';
 import { VSCodeFileAccessor as WorkspaceFileAccessor } from '../adapter-proxy/VSCodeInterface';
 import { windowManager } from "../WindowManager";
-import { GameVersionChecker } from './GameVersionChecker';
+import { GameVersion, GameVersionChecker } from './GameVersionChecker';
 
 const debugLauncherService = new DebugLauncherService();
 const workspaceFileAccessor = new WorkspaceFileAccessor();
@@ -164,6 +164,23 @@ class GameInlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFact
             _session.configuration.noop = true;
             return noopExecutable;
         }
+
+        let gameVersion: GameVersion | undefined = undefined;
+
+        let checkVersionInGameOutput = (output: string) => {
+            if (!output || output.trim() === '') {
+                return true; // not enough output yet
+            }
+            gameVersion = GameVersionChecker.getGameVersionFromOutput(output);
+            if (!gameVersion) {
+                return true; // not enough output yet
+            }
+            if (!GameVersionChecker.versionSupportsDebugger(gameVersion)) {
+                return false; // Does not support debugging
+            }
+            return true; // Supports debugging
+        }
+
         let shouldLaunch = options.request === 'launch' || reattach;
         if (shouldLaunch) {
             await this.resolveProjects(options.projects);
@@ -174,9 +191,9 @@ class GameInlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFact
                 `Waiting for ${GAME_NAME} to start...`,
                 30000
             );
-            launched = await debugLauncherService.runLauncher(launchCommand!, port, cancellationToken);
+            launched = await debugLauncherService.runLauncher(launchCommand!, port, { outputCheckCallback: checkVersionInGameOutput }, cancellationToken);
             wait_message.dispose();
-            pid = debugLauncherService.launcherProcess?.pid || 0;
+            pid = debugLauncherService.gamePID || 0;
         }
         if (launched != DebugLaunchState.success) {
             let errMessage = '';
@@ -187,6 +204,8 @@ class GameInlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFact
             errMessage = debugLauncherService.errorString || `${GAME_NAME} failed to launch.`;
             if (launched === DebugLaunchState.multipleGamesRunning) {
                 errMessage = `Multiple ${GAME_NAME} instances are running, shut them down and try again.`;
+            } else if (launched === DebugLaunchState.outputCheckFailed) {
+                errMessage = `${GAME_NAME} version ${GameVersionChecker.toString(gameVersion!)} does not support debugging. Please grab the latest nightly build from https://devbuilds.drdteam.org/uzdoom/.`;
             }
             throw new Error(errMessage);
         } else { // attach
