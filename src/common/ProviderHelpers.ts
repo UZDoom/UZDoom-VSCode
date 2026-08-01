@@ -5,10 +5,10 @@ import { PK3_EXTENSIONS, PK3_SCHEME } from '../pk3-provider/common';
 import { WAD_EXTENSIONS, WAD_SCHEME } from '../wad-provider/common';
 
 export function getSchemeForArchivePath(path: string): string | undefined {
-    if (PK3_EXTENSIONS.includes(npath.extname(path))) {
+    if (PK3_EXTENSIONS.includes(npath.extname(path).toLowerCase())) {
         return PK3_SCHEME;
     }
-    if (WAD_EXTENSIONS.includes(npath.extname(path))) {
+    if (WAD_EXTENSIONS.includes(npath.extname(path).toLowerCase())) {
         return WAD_SCHEME;
     }
     return undefined;
@@ -28,13 +28,14 @@ export function URIToPath(uri: vscode.Uri): string {
 }
 
 function findArchiveEndIndex(path: string, extensions: string[]): number {
-    let ext = npath.extname(path);
+    let ext = npath.extname(path).toLowerCase();
     if (extensions.includes(ext)) {
         return path.length;
     }
+    let lower_path = path.toLowerCase();
     let found = 0;
     for (let i = 0; i < extensions.length; i++) {
-        let ext_index = path.indexOf(extensions[i] + '/');
+        let ext_index = lower_path.indexOf(extensions[i] + '/');
         if (ext_index !== -1) {
             ext_index += extensions[i].length + 1;
             if (found === 0 || ext_index < found) {

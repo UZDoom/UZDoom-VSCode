@@ -1,5 +1,5 @@
 import Tokenizr from "tokenizr";
-import Lump from "./Lump";
+import Lump, { LoadMode, MatchResult } from "./Lump";
 import ParseTextmapError from "../Exceptions/ParseTextmapError";
 
 // NB: See https://github.com/UZDoom/uzdoom/blob/master/specs/udmf.txt
@@ -76,6 +76,11 @@ export default class Textmap extends Lump
 {
 	namespace?: string;
 	blocks: Block[] = [];
+
+    static isThisFormat(name: string, content: ArrayBuffer, loadMode: LoadMode): MatchResult {
+        if (Lump.trimName(name) !== "TEXTMAP") return MatchResult.false;
+        return MatchResult.true;
+    }
 
 	private tokenize(string: string)
 	{

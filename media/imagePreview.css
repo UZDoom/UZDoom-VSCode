@@ -1,0 +1,200 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+html, body {
+	width: 100%;
+	height: 100%;
+	text-align: center;
+}
+
+body img {
+	max-width: none;
+	max-height: none;
+}
+
+.container:focus {
+	outline: none !important;
+}
+
+.container {
+	padding: 5px 0 0 10px;
+	box-sizing: border-box;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.container.image {
+	padding: 0;
+	display: flex;
+	box-sizing: border-box;
+}
+
+.container.image img {
+	padding: 0;
+	background-position: 0 0, 8px 8px;
+	background-size: 16px 16px;
+	border: 1px solid var(--uzdoom-doomImage-border);
+}
+
+.container.image img {
+	background-image:
+		linear-gradient(45deg, rgb(230, 230, 230) 25%, transparent 25%, transparent 75%, rgb(230, 230, 230) 75%, rgb(230, 230, 230)),
+		linear-gradient(45deg, rgb(230, 230, 230) 25%, transparent 25%, transparent 75%, rgb(230, 230, 230) 75%, rgb(230, 230, 230));
+}
+
+.vscode-dark.container.image img {
+	background-image:
+		linear-gradient(45deg, rgb(20, 20, 20) 25%, transparent 25%, transparent 75%, rgb(20, 20, 20) 75%, rgb(20, 20, 20)),
+		linear-gradient(45deg, rgb(20, 20, 20) 25%, transparent 25%, transparent 75%, rgb(20, 20, 20) 75%, rgb(20, 20, 20));
+}
+
+.container img.pixelated {
+	image-rendering: pixelated;
+}
+
+.container img.scale-to-fit {
+	max-width: calc(100% - 20px);
+	max-height: calc(100% - 20px);
+	object-fit: contain;
+}
+
+.container img {
+	margin: auto;
+}
+
+.container.ready.zoom-in {
+	cursor: zoom-in;
+}
+
+.container.ready.zoom-out {
+	cursor: zoom-out;
+}
+
+.container .embedded-link,
+.container .embedded-link:hover {
+	cursor: pointer;
+	text-decoration: underline;
+	margin-left: 5px;
+}
+
+.container.loading,
+.container.error {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.loading-indicator {
+	width: 30px;
+	height: 30px;
+	background-image: url('./loading.svg');
+	background-size: cover;
+}
+
+.loading-indicator,
+.image-load-error {
+	display: none;
+}
+
+.loading .loading-indicator,
+.error .image-load-error {
+	display: block;
+}
+
+.image-load-error {
+	margin: 1em;
+}
+
+.vscode-dark .loading-indicator {
+	background-image: url('./loading-dark.svg');
+}
+
+.vscode-high-contrast .loading-indicator {
+	background-image: url('./loading-hc.svg');
+}
+
+.image-buttons {
+	position: fixed;
+	top: 10px;
+	right: 10px;
+    /* always on top */
+	z-index: 1000;
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    cursor: default;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+}
+
+.image-buttons .image-counter {
+	font-size: 20px;
+	line-height: 1;
+	color: white;
+    margin-right: 20px;
+    margin-left: 5px;
+}
+
+.image-buttons.no-multiple-images {
+	display: none;
+}
+
+.image-buttons .next-button,
+.image-buttons .previous-button {
+	position: relative;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-radius: 5px;
+    border-color: rgba(255, 255, 255, 0.0);
+    /* strip VSCode/browser default button chrome that produces the
+       ghosted/mirrored bevel around the icon */
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    box-shadow: none !important;
+    text-shadow: none;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 60% 60%;
+    cursor: pointer;
+}
+
+.image-buttons .next-button {
+    margin-left: 5px;
+    background-image: url('./next.svg');
+}
+
+.image-buttons .previous-button {
+    margin-right: 5px;
+    background-image: url('./previous.svg');
+}
+
+.image-buttons .next-button:focus,
+.image-buttons .previous-button:focus {
+    background-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 1.0);
+
+    outline: none;
+    box-shadow: none !important;
+}
+
+.image-buttons .next-button:hover,
+.image-buttons .previous-button:hover {
+    background-color: rgba(255, 255, 255, 0.75);
+    outline: none;
+    box-shadow: none !important;
+}
+
+.image-buttons .next-button:active,
+.image-buttons .previous-button:active {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 1.0);
+    outline: none;
+    box-shadow: none !important;
+}

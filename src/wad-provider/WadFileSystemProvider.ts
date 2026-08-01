@@ -2,12 +2,12 @@ import { Emitter } from "../adapter-proxy/IDEInterface"
 import { FileSystemProvider, FileStat, FileType, Event, FileChangeEvent, Disposable, Uri } from 'vscode';
 import Wad from "../doom-wad/Wad";
 import * as fs from 'fs/promises';
-import Lump from "../doom-wad/Lumps/Lump";
+import * as vscode from 'vscode';
+import Lump, { LoadMode } from "../doom-wad/Lumps/Lump";
 import { readFileSync } from "fs";
-import * as path from "path";
-
 import { WAD_EXTENSIONS as EXTENSIONS, WAD_SCHEME } from './common';
 import { pathToURI, URIToArchivePathParts } from "../common/ProviderHelpers";
+import { registerFileAssociations } from '../previewers/extension';
 /**
  * A read-only file system provider for WAD files.
  */
@@ -32,13 +32,48 @@ export class WadFileSystemProvider implements FileSystemProvider {
         };
     }
 
+    private async registerDefaultEditors(wad: Wad, wadPath: string) {
+        let lumpUris: Map<Uri, { name: string, type: string }> = new Map();
+        for (const lump of wad.lumps) {
+            if (lump.documentType !== "") {
+                lumpUris.set(WadFileSystemProvider.CreateWadUri(wadPath, lump.name), { name: lump.name, type: lump.documentType });
+            }
+        }
+        if (lumpUris.size > 0) {
+            const SECTION = 'workbench';
+            const KEY = 'editorAssociations';
+            let config = vscode.workspace.getConfiguration(SECTION);
+            let value: Record<string, string> | undefined = config.get<Record<string, string>>(KEY);
+            if (!value) {
+                value = {};
+            } else {
+                value = Object.assign({}, value);
+            }
+            for (const key in value) {
+                if (key.startsWith('wad:')) {
+                    let uri = Uri.parse(key);
+                    let [wadPath, ..._] = URIToArchivePathParts(uri, 1, EXTENSIONS);
+                    if (!this.Wads.has(wadPath)) {
+                        delete value[key];
+                    }
+                }
+            }
+            for (const [uri, _] of lumpUris) {
+                value[uri.toString()] = 'uzdoom.doomLump.previewEditor';
+            }
+            config.update(KEY, value, vscode.ConfigurationTarget.Workspace);
+            registerFileAssociations(lumpUris);
+        }
+    }
+
     private async getWadFile(wadPath: string): Promise<Wad> {
         if (!this.Wads.has(wadPath)) {
             try {
-            const wad = new Wad();
-            const buffer = readFileSync(wadPath);
-            wad.load(buffer.buffer);
-            this.Wads.set(wadPath, wad);
+                const wad = new Wad();
+                const buffer = readFileSync(wadPath);
+                wad.load(buffer.buffer);
+                await this.registerDefaultEditors(wad, wadPath);
+                this.Wads.set(wadPath, wad);
             } catch (e) {
                 throw new Error(`Failed to load WAD file ${wadPath}: ${e}`);
             }
@@ -107,7 +142,7 @@ export class WadFileSystemProvider implements FileSystemProvider {
         }
 
         if (!entry) {
-            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer);
+            entry = new Lump(wad.lumps.length, entryPath, new Uint8Array(content).buffer, LoadMode.normal);
             wad.lumps.push(entry);
         } else {
             entry.content = content.buffer as ArrayBuffer;
